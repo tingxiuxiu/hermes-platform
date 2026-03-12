@@ -1,0 +1,28 @@
+server:
+  port: "8080"
+  host: "0.0.0.0"
+  readTimeout: 15
+  writeTimeout: 15
+
+database:
+  host: "127.0.0.1"
+  port: "5432"
+  user: "postgres"
+  password: "postgres"
+  dbname: "hermes_platform"
+  sslmode: "require"
+
+jwt:
+  secret: "prod-secret-key"
+  expiration: 24
+
+log:
+  level: "info"
+  file: "/var/log/hermes-platform.log"
+
+redis:
+  host: "127.0.0.1"
+  port: "6379"
+  password: ""
+  db: 0
+  poolSize: 10

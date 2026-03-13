@@ -31,3 +31,6 @@ yarn-error.log*
 
 frontend/dist
 frontend/node_modules
+
+main.exe
+server.exe

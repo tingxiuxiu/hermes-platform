@@ -5,8 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authApi } from "@/services/authApi";
+import { tokenApi, type APIToken } from "@/services/tokenApi";
 import { LanguageSwitcher } from "@/components/ui/languageSwitcher";
-import { Settings as SettingsIcon, Globe, Lock, Bell, Palette } from "lucide-react";
+import { Settings as SettingsIcon, Globe, Lock, Bell, Palette, Key, Copy, Trash2, CheckCircle } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 
 function Settings() {
   const { t } = useTranslation();
@@ -15,6 +17,45 @@ function Settings() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const [newTokenName, setNewTokenName] = useState("");
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+
+  const { data: tokensData, isLoading: tokensLoading, refetch: refetchTokens } = useQuery({
+    queryKey: ["apiTokens"],
+    queryFn: () => tokenApi.getTokens(),
+  });
+
+  const createTokenMutation = useMutation({
+    mutationFn: (name: string) => tokenApi.createToken(name),
+    onSuccess: (data) => {
+      if (data.success && data.data) {
+        setGeneratedToken(data.data.token);
+        setNewTokenName("");
+        refetchTokens();
+      } else {
+        setMessage({ type: "error", text: data.error?.message || t("settings.tokenCreateFailed") });
+      }
+    },
+    onError: () => {
+      setMessage({ type: "error", text: t("settings.tokenCreateFailed") });
+    },
+  });
+
+  const revokeTokenMutation = useMutation({
+    mutationFn: (id: number) => tokenApi.revokeToken(id),
+    onSuccess: (data) => {
+      if (data.success) {
+        setMessage({ type: "success", text: t("settings.tokenRevoked") });
+        refetchTokens();
+      } else {
+        setMessage({ type: "error", text: data.error?.message || t("settings.tokenRevokeFailed") });
+      }
+    },
+    onError: () => {
+      setMessage({ type: "error", text: t("settings.tokenRevokeFailed") });
+    },
+  });
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +92,25 @@ function Settings() {
       setLoading(false);
     }
   };
+
+  const handleCreateToken = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTokenName.trim()) return;
+    createTokenMutation.mutate(newTokenName);
+  };
+
+  const handleRevokeToken = (id: number) => {
+    if (window.confirm(t("settings.confirmRevokeToken", "确定要撤销此 Token 吗？"))) {
+      revokeTokenMutation.mutate(id);
+    }
+  };
+
+  const copyToken = (token: string) => {
+    navigator.clipboard.writeText(token);
+    setMessage({ type: "success", text: t("settings.tokenCopied", "Token 已复制到剪贴板") });
+  };
+
+  const tokens: APIToken[] = tokensData?.data?.tokens || [];
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-4xl">
@@ -142,6 +202,91 @@ function Settings() {
                 {loading ? t("settings.saving", "保存中...") : t("settings.savePassword", "保存密码")}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              {t("settings.apiTokens", "API Token")}
+            </CardTitle>
+            <CardDescription>
+              {t("settings.apiTokensDesc", "管理用于自动化测试的 API Token，有效期 365 天")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form onSubmit={handleCreateToken} className="flex gap-2">
+              <Input
+                type="text"
+                value={newTokenName}
+                onChange={(e) => setNewTokenName(e.target.value)}
+                placeholder={t("settings.tokenNamePlaceholder", "输入 Token 名称")}
+                className="flex-1"
+              />
+              <Button type="submit" disabled={createTokenMutation.isPending || !newTokenName.trim()}>
+                {createTokenMutation.isPending ? t("settings.generating", "生成中...") : t("settings.generateToken", "生成 Token")}
+              </Button>
+            </form>
+
+            {generatedToken && (
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="font-medium">{t("settings.tokenGenerated", "Token 生成成功！")}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 p-2 bg-white dark:bg-slate-800 rounded text-xs break-all">
+                    {generatedToken}
+                  </code>
+                  <Button variant="outline" size="sm" onClick={() => copyToken(generatedToken)}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                  {t("settings.tokenWarning", "请立即复制 Token，此 Token 只会显示一次！")}
+                </p>
+                <Button variant="ghost" size="sm" className="mt-2" onClick={() => setGeneratedToken(null)}>
+                  {t("settings.dismiss", "知道了")}
+                </Button>
+              </div>
+            )}
+
+            {tokensLoading ? (
+              <div className="text-center py-4 text-slate-500">{t("settings.loading", "加载中...")}</div>
+            ) : tokens.length > 0 ? (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">{t("settings.yourTokens", "您的 Token 列表")}</h4>
+                {tokens.map((token) => (
+                  <div
+                    key={token.id}
+                    className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  >
+                    <div>
+                      <div className="font-medium">{token.name}</div>
+                      <div className="text-xs text-slate-500">
+                        {token.token} · {t("settings.expiresAt", "过期于")} {token.expires_at}
+                        {token.is_revoked && ` · ${t("settings.revoked", "已撤销")}`}
+                      </div>
+                    </div>
+                    {!token.is_revoked && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRevokeToken(token.id)}
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-500 dark:text-slate-400 text-center py-4">
+                {t("settings.noTokens", "暂无 API Token")}
+              </p>
+            )}
           </CardContent>
         </Card>
 

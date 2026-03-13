@@ -1,10 +1,11 @@
 import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router'
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App.tsx'
 import ProtectedRoute from './components/ProtectedRoute.tsx'
+import { useAuthStore } from './stores/authStore.ts'
 
 const Dashboard = lazy(() => import('./pages/Dashboard.tsx'))
 const Home = lazy(() => import('./pages/Home.tsx'))
@@ -15,6 +16,16 @@ const ExecutionDetail = lazy(() => import('./pages/ExecutionDetail.tsx'))
 const Settings = lazy(() => import('./pages/Settings.tsx'))
 const Profile = lazy(() => import('./pages/Profile.tsx'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword.tsx'))
+
+function RootRedirect() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <Navigate to="/login" replace />;
+}
 
 function PageLoader() {
   return (
@@ -37,6 +48,10 @@ const queryClient = new QueryClient({
 })
 
 const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <RootRedirect />,
+  },
   {
     path: '/login',
     element: (
@@ -64,6 +79,16 @@ const router = createBrowserRouter([
   {
     element: <App />,
     children: [
+      {
+        path: '/dashboard',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <Dashboard />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
       {
         path: '/',
         element: (

@@ -170,12 +170,13 @@
     "running": "运行中",
     "progress": "进度",
     "estimatedEnd": "预计结束",
+    "loadingError": "加载数据失败，请稍后重试",
+    "noData": "暂无数据",
     "today": "今日",
     "thisWeek": "本周",
     "thisMonth": "本月",
     "thisYear": "今年",
-    "allTime": "历史",
-    "noData": "暂无数据"
+    "allTime": "历史"
   },
   "userManagement": {
     "title": "用户管理",

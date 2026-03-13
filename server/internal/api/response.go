@@ -7,6 +7,7 @@ import (
 )
 
 type Response struct {
+	Success bool        `json:"success"`
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
@@ -15,6 +16,7 @@ type Response struct {
 
 func Success(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, Response{
+		Success: true,
 		Code:    http.StatusOK,
 		Message: "success",
 		Data:    data,
@@ -22,48 +24,54 @@ func Success(c *gin.Context, data interface{}) {
 }
 
 func Created(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusCreated, Response{
-		Code:    http.StatusCreated,
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Code:    201,
 		Message: "created",
 		Data:    data,
 	})
 }
 
 func BadRequest(c *gin.Context, err string) {
-	c.JSON(http.StatusBadRequest, Response{
-		Code:    http.StatusBadRequest,
+	c.JSON(http.StatusOK, Response{
+		Success: false,
+		Code:    400,
 		Message: "bad request",
 		Error:   err,
 	})
 }
 
 func Unauthorized(c *gin.Context, err string) {
-	c.JSON(http.StatusUnauthorized, Response{
-		Code:    http.StatusUnauthorized,
+	c.JSON(http.StatusOK, Response{
+		Success: false,
+		Code:    401,
 		Message: "unauthorized",
 		Error:   err,
 	})
 }
 
 func Forbidden(c *gin.Context, err string) {
-	c.JSON(http.StatusForbidden, Response{
-		Code:    http.StatusForbidden,
+	c.JSON(http.StatusOK, Response{
+		Success: false,
+		Code:    403,
 		Message: "forbidden",
 		Error:   err,
 	})
 }
 
 func NotFound(c *gin.Context, err string) {
-	c.JSON(http.StatusNotFound, Response{
-		Code:    http.StatusNotFound,
+	c.JSON(http.StatusOK, Response{
+		Success: false,
+		Code:    404,
 		Message: "not found",
 		Error:   err,
 	})
 }
 
 func InternalServerError(c *gin.Context, err string) {
-	c.JSON(http.StatusInternalServerError, Response{
-		Code:    http.StatusInternalServerError,
+	c.JSON(http.StatusOK, Response{
+		Success: false,
+		Code:    500,
 		Message: "internal server error",
 		Error:   err,
 	})
@@ -71,6 +79,7 @@ func InternalServerError(c *gin.Context, err string) {
 
 func SuccessWithData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, Response{
+		Success: true,
 		Code:    http.StatusOK,
 		Message: "success",
 		Data:    data,

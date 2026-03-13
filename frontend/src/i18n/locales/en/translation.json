@@ -169,13 +169,14 @@
     "noRunningTasks": "No running tasks",
     "running": "Running",
     "progress": "Progress",
-    "estimatedEnd": "Est. End",
+    "estimatedEnd": "Estimated End",
+    "loadingError": "Failed to load data, please try again later",
+    "noData": "No data available",
     "today": "Today",
     "thisWeek": "This Week",
     "thisMonth": "This Month",
     "thisYear": "This Year",
-    "allTime": "All Time",
-    "noData": "No data available"
+    "allTime": "All Time"
   },
   "userManagement": {
     "title": "User Management",

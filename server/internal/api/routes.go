@@ -12,7 +12,7 @@ import (
 func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -47,17 +47,29 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	statsService := services.NewStatsService(db)
 	statsHandler := NewStatsHandler(statsService)
 
+	tokenService := services.NewAPITokenService(db)
+	tokenHandler := NewTokenHandler(tokenService)
+
 	api := r.Group("/api")
 	{
 		authRoutes := api.Group("/auth")
 		{
+			authRoutes.GET("/rsa-pubkey", authHandler.GetRSAPubKey)
 			authRoutes.POST("/register", authHandler.Register)
 			authRoutes.POST("/login", authHandler.Login)
 			authRoutes.POST("/forgot-password", authHandler.ForgotPassword)
 			authRoutes.Use(auth.AuthMiddleware())
 			authRoutes.POST("/change-password", authHandler.ChangePassword)
 			authRoutes.GET("/profile", authHandler.GetProfile)
-			authRoutes.PUT("/profile", authHandler.UpdateProfile)
+			authRoutes.POST("/profile/update", authHandler.UpdateProfile)
+		}
+
+		tokenRoutes := api.Group("/tokens")
+		tokenRoutes.Use(auth.AuthMiddleware())
+		{
+			tokenRoutes.POST("", tokenHandler.CreateToken)
+			tokenRoutes.GET("", tokenHandler.ListTokens)
+			tokenRoutes.POST("/:id/delete", tokenHandler.DeleteToken)
 		}
 
 		userRoutes := api.Group("/users")
@@ -65,9 +77,9 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 		{
 			userRoutes.GET("", auth.PermissionMiddleware(permissionService, "user:manage"), userHandler.ListUsers)
 			userRoutes.GET("/:id", auth.PermissionMiddleware(permissionService, "user:manage"), userHandler.GetUser)
-			userRoutes.PUT("/:id", auth.PermissionMiddleware(permissionService, "user:manage"), userHandler.UpdateUser)
-			userRoutes.DELETE("/:id", auth.PermissionMiddleware(permissionService, "user:manage"), userHandler.DeleteUser)
-			userRoutes.PUT("/:id/roles", auth.PermissionMiddleware(permissionService, "user:manage"), userHandler.AssignRoles)
+			userRoutes.POST("/:id/update", auth.PermissionMiddleware(permissionService, "user:manage"), userHandler.UpdateUser)
+			userRoutes.POST("/:id/delete", auth.PermissionMiddleware(permissionService, "user:manage"), userHandler.DeleteUser)
+			userRoutes.POST("/:id/assign-roles", auth.PermissionMiddleware(permissionService, "user:manage"), userHandler.AssignRoles)
 		}
 
 		statsRoutes := api.Group("/stats")
@@ -88,8 +100,8 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				testTasks.GET("/:id/details", auth.PermissionMiddleware(permissionService, "test_detail:view"), testHandler.ListTestDetailsByTaskID)
 				testTasks.GET("/:id/records", auth.PermissionMiddleware(permissionService, "test_record:view"), testHandler.ListTestRecordsByTaskID)
 				testTasks.GET("/:id", auth.PermissionMiddleware(permissionService, "test_task:view"), testHandler.GetTestTaskByID)
-				testTasks.PUT("/:id", auth.PermissionMiddleware(permissionService, "test_task:edit"), testHandler.UpdateTestTask)
-				testTasks.DELETE("/:id", auth.PermissionMiddleware(permissionService, "test_task:delete"), testHandler.DeleteTestTask)
+				testTasks.POST("/:id/update", auth.PermissionMiddleware(permissionService, "test_task:edit"), testHandler.UpdateTestTask)
+				testTasks.POST("/:id/delete", auth.PermissionMiddleware(permissionService, "test_task:delete"), testHandler.DeleteTestTask)
 				testTasks.GET("/buildid/:buildid/progress", auth.PermissionMiddleware(permissionService, "test_task:view"), testHandler.GetTestTaskProgressByBuildID)
 			}
 
@@ -97,8 +109,8 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			{
 				testDetails.POST("", auth.PermissionMiddleware(permissionService, "test_detail:create"), testHandler.CreateTestDetail)
 				testDetails.GET("/:id", auth.PermissionMiddleware(permissionService, "test_detail:view"), testHandler.GetTestDetailByID)
-				testDetails.PUT("/:id", auth.PermissionMiddleware(permissionService, "test_detail:edit"), testHandler.UpdateTestDetail)
-				testDetails.DELETE("/:id", auth.PermissionMiddleware(permissionService, "test_detail:delete"), testHandler.DeleteTestDetail)
+				testDetails.POST("/:id/update", auth.PermissionMiddleware(permissionService, "test_detail:edit"), testHandler.UpdateTestDetail)
+				testDetails.POST("/:id/delete", auth.PermissionMiddleware(permissionService, "test_detail:delete"), testHandler.DeleteTestDetail)
 				testDetails.GET("/:id/steps", auth.PermissionMiddleware(permissionService, "test_detail:view"), testHandler.ListTestStepDetailsByTestDetailID)
 			}
 
@@ -106,16 +118,16 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			{
 				testSteps.POST("", auth.PermissionMiddleware(permissionService, "test_detail:create"), testHandler.CreateTestStepDetail)
 				testSteps.GET("/:id", auth.PermissionMiddleware(permissionService, "test_detail:view"), testHandler.GetTestStepDetailByID)
-				testSteps.PUT("/:id", auth.PermissionMiddleware(permissionService, "test_detail:edit"), testHandler.UpdateTestStepDetail)
-				testSteps.DELETE("/:id", auth.PermissionMiddleware(permissionService, "test_detail:delete"), testHandler.DeleteTestStepDetail)
+				testSteps.POST("/:id/update", auth.PermissionMiddleware(permissionService, "test_detail:edit"), testHandler.UpdateTestStepDetail)
+				testSteps.POST("/:id/delete", auth.PermissionMiddleware(permissionService, "test_detail:delete"), testHandler.DeleteTestStepDetail)
 			}
 
 			testRecords := testRoutes.Group("/test-records")
 			{
 				testRecords.POST("", auth.PermissionMiddleware(permissionService, "test_record:create"), testHandler.CreateTestRecord)
 				testRecords.GET("/:id", auth.PermissionMiddleware(permissionService, "test_record:view"), testHandler.GetTestRecordByID)
-				testRecords.PUT("/:id", auth.PermissionMiddleware(permissionService, "test_record:edit"), testHandler.UpdateTestRecord)
-				testRecords.DELETE("/:id", auth.PermissionMiddleware(permissionService, "test_record:delete"), testHandler.DeleteTestRecord)
+				testRecords.POST("/:id/update", auth.PermissionMiddleware(permissionService, "test_record:edit"), testHandler.UpdateTestRecord)
+				testRecords.POST("/:id/delete", auth.PermissionMiddleware(permissionService, "test_record:delete"), testHandler.DeleteTestRecord)
 			}
 		}
 	}

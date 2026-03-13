@@ -51,5 +51,6 @@ func AutoMigrate(db *gorm.DB) {
 		&models.TestTask{},
 		&models.TestDetail{},
 		&models.TestRecord{},
+		&models.APIToken{},
 	)
 }

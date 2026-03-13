@@ -52,21 +52,21 @@ export const userApi = {
     id: number,
     data: UpdateUserRequest,
   ): Promise<ApiResponse<{ message: string; user: User }>> => {
-    return apiClient.put<{ message: string; user: User }>(
-      `/api/users/${id}`,
+    return apiClient.post<{ message: string; user: User }>(
+      `/api/users/${id}/update`,
       data,
     );
   },
 
   deleteUser: (id: number): Promise<ApiResponse<{ message: string }>> => {
-    return apiClient.delete<{ message: string }>(`/api/users/${id}`);
+    return apiClient.post<{ message: string }>(`/api/users/${id}/delete`);
   },
 
   assignRoles: (
     id: number,
     roleIds: number[],
   ): Promise<ApiResponse<{ message: string }>> => {
-    return apiClient.put<{ message: string }>(`/api/users/${id}/roles`, {
+    return apiClient.post<{ message: string }>(`/api/users/${id}/assign-roles`, {
       role_ids: roleIds,
     });
   },

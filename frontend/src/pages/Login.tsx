@@ -12,6 +12,7 @@ import { Lock, Mail, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { authApi, type LoginRequest } from "@/services/authApi";
 import { useAuthStore } from "@/stores/authStore";
 import { setToken } from "@/lib/api";
+import { encryptPassword } from "@/lib/rsa";
 
 const loginSchema = z.object({
   email: z
@@ -55,7 +56,26 @@ function Login() {
     setErrorMessage(null);
     
     try {
-      const response = await authApi.login(data as LoginRequest);
+      let loginData: LoginRequest = {
+        email: data.email,
+        password: data.password,
+      };
+
+      try {
+        const pubKeyResponse = await authApi.getRSAPubKey();
+        if (pubKeyResponse.success && pubKeyResponse.data?.public_key) {
+          const encryptedPwd = await encryptPassword(data.password, pubKeyResponse.data.public_key);
+          loginData = {
+            email: data.email,
+            password: "",
+            encrypted_pwd: encryptedPwd,
+          };
+        }
+      } catch (rsaError) {
+        console.warn("RSA encryption failed, using plaintext:", rsaError);
+      }
+      
+      const response = await authApi.login(loginData);
       
       if (response.success && response.data) {
         const { token } = response.data;

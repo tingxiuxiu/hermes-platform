@@ -1,8 +1,11 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
+	"com.hermes.platform/internal/crypto"
 	"com.hermes.platform/internal/services"
+	"errors"
+
+	"github.com/gin-gonic/gin"
 )
 
 // AuthHandler 认证处理器
@@ -24,8 +27,24 @@ type RegisterRequest struct {
 
 // LoginRequest 登录请求结构
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
+	Email         string `json:"email" binding:"required,email"`
+	Password      string `json:"password"`
+	EncryptedPwd  string `json:"encrypted_pwd"`
+}
+
+func (r *LoginRequest) Validate() error {
+	if r.Password == "" && r.EncryptedPwd == "" {
+		return errors.New("either password or encrypted_pwd is required")
+	}
+	if r.Password != "" && len(r.Password) < 6 {
+		return errors.New("password must be at least 6 characters")
+	}
+	return nil
+}
+
+// RSAPubKeyResponse RSA 公钥响应
+type RSAPubKeyResponse struct {
+	PublicKey string `json:"public_key"`
 }
 
 // ChangePasswordRequest 修改密码请求结构
@@ -76,7 +95,23 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.authService.Login(req.Email, req.Password)
+	if err := req.Validate(); err != nil {
+		BadRequest(c, err.Error())
+		return
+	}
+
+	password := req.Password
+
+	if req.EncryptedPwd != "" {
+		decryptedPwd, err := crypto.Decrypt(req.EncryptedPwd)
+		if err != nil {
+			Unauthorized(c, "Failed to decrypt password")
+			return
+		}
+		password = decryptedPwd
+	}
+
+	token, err := h.authService.Login(req.Email, password)
 	if err != nil {
 		Unauthorized(c, err.Error())
 		return
@@ -85,6 +120,19 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	Success(c, gin.H{
 		"message": "Login successful",
 		"token":   token,
+	})
+}
+
+// GetRSAPubKey 获取 RSA 公钥
+func (h *AuthHandler) GetRSAPubKey(c *gin.Context) {
+	pubKey := crypto.GetPublicKeyPEM()
+	if pubKey == "" {
+		InternalServerError(c, "Failed to get RSA public key")
+		return
+	}
+
+	Success(c, RSAPubKeyResponse{
+		PublicKey: pubKey,
 	})
 }
 

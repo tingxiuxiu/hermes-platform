@@ -10,6 +10,11 @@ export interface RegisterRequest {
 export interface LoginRequest {
   email: string;
   password: string;
+  encrypted_pwd?: string;
+}
+
+export interface RSAPubKeyResponse {
+  public_key: string;
 }
 
 export interface ChangePasswordRequest {
@@ -46,6 +51,10 @@ export interface ProfileResponse {
 }
 
 export const authApi = {
+  getRSAPubKey: (): Promise<ApiResponse<RSAPubKeyResponse>> => {
+    return apiClient.get<RSAPubKeyResponse>("/api/auth/rsa-pubkey");
+  },
+
   register: (data: RegisterRequest): Promise<ApiResponse<RegisterResponse>> => {
     return apiClient.post<RegisterResponse>("/api/auth/register", data);
   },
@@ -59,7 +68,7 @@ export const authApi = {
   },
 
   updateProfile: (data: { name: string }): Promise<ApiResponse<{ message: string }>> => {
-    return apiClient.put<{ message: string }>("/api/auth/profile", data);
+    return apiClient.post<{ message: string }>("/api/auth/profile/update", data);
   },
 
   changePassword: (data: ChangePasswordRequest): Promise<ApiResponse<{ message: string }>> => {

@@ -1,126 +1,69 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router'
-import { Bell, Menu, X, Home, ClipboardList, Users, Settings } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Link } from 'react-router'
+import { PanelLeft, PanelLeftClose } from 'lucide-react'
 import { UserMenu } from '@/components/UserMenu'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { Footer } from '@/components/layout/Footer'
+import { NotificationBell } from '@/components/layout/NotificationBell'
+import { LanguageSwitcher } from '@/components/ui/languageSwitcher'
+import { useTranslation } from 'react-i18next'
 
 interface MainLayoutProps {
   children: React.ReactNode
 }
 
-const navItems = [
-  { path: '/', label: '仪表盘', icon: Home },
-  { path: '/tasks', label: '任务管理', icon: ClipboardList },
-  { path: '/admin/users', label: '用户管理', icon: Users },
-  { path: '/settings', label: '系统设置', icon: Settings },
-]
-
 export function MainLayout({ children }: MainLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const location = useLocation()
-
-  const sidebarWidth = isSidebarCollapsed ? 'w-16' : 'w-60'
+  const { t } = useTranslation()
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-900">
-      <header className="flex items-center justify-between h-16 px-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shrink-0">
+    <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
+      {/* 上部 - 顶部导航栏 */}
+      <header className="flex items-center justify-between h-16 px-4 bg-surface border-b border-border shadow-level-2 shrink-0 z-10">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            aria-label={isSidebarCollapsed ? '展开菜单' : '折叠菜单'}
+            className="p-2 rounded-full text-on-surface-variant hover:bg-surface-variant/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background"
+            aria-label={isSidebarCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
           >
             {isSidebarCollapsed ? (
-              <Menu className="w-5 h-5" />
+              <PanelLeft className="w-5 h-5" />
             ) : (
-              <X className="w-5 h-5" />
+              <PanelLeftClose className="w-5 h-5" />
             )}
           </button>
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">H</span>
+            <div className="w-10 h-10 bg-primary-container rounded-2xl flex items-center justify-center">
+              <span className="text-primary font-bold text-lg">H</span>
             </div>
-            <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Hermes Platform
+            <span className="text-xl font-medium text-on-surface">
+              {t('navbar.brand')}
             </span>
           </Link>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            className="relative p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-            aria-label="通知"
-          >
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-          </button>
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <LanguageSwitcher />
+          <ThemeToggle />
           <UserMenu />
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <aside
-          className={cn(
-            'shrink-0 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition-all duration-300',
-            sidebarWidth
-          )}
-        >
-          <nav className="h-full overflow-y-auto p-2">
-            <div className="space-y-1">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path
-                const Icon = item.icon
-                return (
-                  <SidebarItem
-                    key={item.path}
-                    path={item.path}
-                    icon={<Icon className="w-5 h-5" />}
-                    label={item.label}
-                    collapsed={isSidebarCollapsed}
-                    active={isActive}
-                  />
-                )
-              })}
-            </div>
-          </nav>
-        </aside>
-
-        <main className="flex-1 overflow-auto p-4">
-          {children}
+      {/* 中间 - 左侧菜单 + 右侧内容 */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        <Sidebar collapsed={isSidebarCollapsed} />
+        
+        <main className="flex-1 overflow-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
 
-      <footer className="flex items-center justify-center h-12 px-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shrink-0">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          © 2024 Hermes Platform. All rights reserved.
-        </p>
-      </footer>
+      {/* 下部 - 页脚 */}
+      <Footer />
     </div>
-  )
-}
-
-interface SidebarItemProps {
-  path: string
-  icon: React.ReactNode
-  label: string
-  collapsed: boolean
-  active?: boolean
-}
-
-function SidebarItem({ path, icon, label, collapsed, active }: SidebarItemProps) {
-  return (
-    <Link
-      to={path}
-      className={cn(
-        'flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-        active
-          ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400'
-          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-      )}
-      title={collapsed ? label : undefined}
-    >
-      <span className="shrink-0">{icon}</span>
-      {!collapsed && <span>{label}</span>}
-    </Link>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router'
-import { LayoutDashboard, ClipboardList, Users, ChevronDown, ChevronRight, PanelLeftClose, PanelLeft } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Users, ChevronDown, ChevronRight, Folder, FileText, CheckSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 
@@ -13,10 +13,9 @@ interface MenuItem {
 
 interface SidebarProps {
   collapsed: boolean
-  onToggle: () => void
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed }: SidebarProps) {
   const { t } = useTranslation()
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
 
@@ -30,6 +29,21 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       path: '/tasks',
       label: t('sidebar.tasks'),
       icon: <ClipboardList className="w-5 h-5" />
+    },
+    {
+      path: '/projects',
+      label: t('sidebar.projects'),
+      icon: <Folder className="w-5 h-5" />
+    },
+    {
+      path: '/test-plans',
+      label: t('sidebar.testPlans'),
+      icon: <FileText className="w-5 h-5" />
+    },
+    {
+      path: '/test-cases',
+      label: t('sidebar.testCases'),
+      icon: <CheckSquare className="w-5 h-5" />
     },
     {
       label: t('sidebar.systemConfig'),
@@ -58,14 +72,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       const isExpanded = expandedMenus.includes(item.label)
       
       return (
-        <div key={item.label} className="mb-1">
+        <div key={item.label} className="mb-0.5">
           <button
             onClick={() => toggleSubMenu(item.label)}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300",
-              "text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400",
-              "hover:bg-slate-100 dark:hover:bg-slate-800",
-              collapsed && "justify-center"
+              "w-full flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium transition-all duration-200 relative overflow-hidden",
+              "text-on-surface-variant hover:text-on-surface",
+              "hover:bg-surface-container-hov",
+              collapsed && "justify-center px-0"
             )}
           >
             {item.icon}
@@ -82,17 +96,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </button>
           
           {!collapsed && isExpanded && (
-            <div className="ml-4 mt-1 pl-4 border-l border-slate-200 dark:border-slate-700">
+            <div className="ml-4 mt-1 pl-4 border-l border-outline/30">
               {item.children.map(child => (
                 <NavLink
                   key={child.path}
                   to={child.path!}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all duration-300",
+                      "flex items-center gap-3 px-4 py-2.5 rounded-full text-sm transition-all duration-200 relative overflow-hidden",
                       isActive
-                        ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 font-medium"
-                        : "text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        ? "text-primary bg-primary-container font-medium"
+                        : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-hov"
                     )
                   }
                 >
@@ -112,11 +126,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         to={item.path!}
         className={({ isActive }) =>
           cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 mb-1",
+            "flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium transition-all duration-200 mb-0.5 relative overflow-hidden",
             isActive
-              ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40"
-              : "text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800",
-            collapsed && "justify-center"
+              ? "text-primary bg-primary-container"
+              : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-hov",
+            collapsed && "justify-center px-0"
           )
         }
         title={collapsed ? item.label : undefined}
@@ -130,32 +144,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300",
-        collapsed ? "w-16" : "w-60"
+        "h-full bg-surface border-r border-border flex flex-col transition-all duration-300 shadow-level-1 z-20",
+        collapsed ? "w-20" : "w-72"
       )}
     >
-      <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800">
-        {!collapsed && (
-          <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            {t('navbar.brand')}
-          </span>
-        )}
-        <button
-          onClick={onToggle}
-          className={cn(
-            "p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-300",
-            collapsed && "mx-auto"
-          )}
-          title={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
-        >
-          {collapsed ? (
-            <PanelLeft className="w-5 h-5" />
-          ) : (
-            <PanelLeftClose className="w-5 h-5" />
-          )}
-        </button>
-      </div>
-
       <nav className="flex-1 p-3 overflow-y-auto">
         {menuItems.map(renderMenuItem)}
       </nav>

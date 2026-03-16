@@ -3,35 +3,43 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { RippleEffect } from "./Ripple"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button relative inline-flex shrink-0 items-center justify-center rounded-full border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all duration-200 ease-in-out outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-38 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        filled:
+          "bg-primary text-primary-foreground shadow-level-1 hover:shadow-level-2 active:shadow-level-0 hover:bg-primary/92 active:bg-primary/88",
+        "filled-tonal":
+          "bg-primary-container text-primary-container-foreground shadow-level-1 hover:shadow-level-2 active:shadow-level-0 hover:bg-primary-container/92 active:bg-primary-container/88",
+        outlined:
+          "border-border bg-background text-primary hover:bg-primary/8 active:bg-primary/12 dark:border-border dark:bg-background dark:hover:bg-primary/8 dark:active:bg-primary/12",
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-background text-primary hover:bg-primary/8 active:bg-primary/12 dark:border-border dark:bg-background dark:hover:bg-primary/8 dark:active:bg-primary/12",
+        text:
+          "text-primary hover:bg-primary/8 active:bg-primary/12",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-secondary-container text-secondary-container-foreground shadow-level-1 hover:shadow-level-2 active:shadow-level-0 hover:bg-secondary-container/92 active:bg-secondary-container/88",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "text-foreground hover:bg-muted/50 active:bg-muted dark:hover:bg-muted/50 dark:active:bg-muted",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+          "bg-destructive text-destructive-foreground shadow-level-1 hover:shadow-level-2 active:shadow-level-0 hover:bg-destructive/92 active:bg-destructive/88",
         link: "text-primary underline-offset-4 hover:underline",
+        default:
+          "bg-primary text-primary-foreground shadow-level-1 hover:shadow-level-2 active:shadow-level-0 hover:bg-primary/92 active:bg-primary/88",
       },
       size: {
         default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
-        icon: "size-8",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
+          "h-10 gap-2 px-6 has-data-[icon=inline-end]:pr-5 has-data-[icon=inline-start]:pl-5",
+        xs: "h-8 gap-1 px-4 text-xs [&_svg:not([class*='size-'])]:size-4",
+        sm: "h-9 gap-1.5 px-5 text-[0.875rem] [&_svg:not([class*='size-'])]:size-4.5",
+        lg: "h-12 gap-2 px-7 text-base [&_svg:not([class*='size-'])]:size-6",
+        icon: "size-10",
+        "icon-xs": "size-8 [&_svg:not([class*='size-'])]:size-4",
+        "icon-sm": "size-9 [&_svg:not([class*='size-'])]:size-4.5",
+        "icon-lg": "size-12 [&_svg:not([class*='size-'])]:size-6",
       },
     },
     defaultVariants: {
@@ -52,6 +60,13 @@ function Button({
     asChild?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"
+  
+  const getRippleColor = () => {
+    if (variant === "filled" || variant === "filled-tonal" || variant === "secondary" || variant === "destructive" || variant === "default") {
+      return "white"
+    }
+    return undefined
+  }
 
   return (
     <Comp
@@ -60,7 +75,10 @@ function Button({
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {!props.disabled && <RippleEffect color={getRippleColor()} />}
+      {props.children}
+    </Comp>
   )
 }
 

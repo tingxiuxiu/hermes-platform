@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"com.hermes.platform/internal/auth"
 	"com.hermes.platform/internal/config"
 	"com.hermes.platform/internal/database"
+	"github.com/gin-gonic/gin"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func TestSystemFunctionality(t *testing.T) {
@@ -37,7 +37,7 @@ func TestSystemFunctionality(t *testing.T) {
 
 	// 创建 Gin 引擎
 	router := gin.Default()
-	RegisterRoutes(router, db)
+	RegisterRoutes(router, db, cfg)
 
 	// 1. 测试用户注册
 	t.Log("Step 1: Testing user registration")

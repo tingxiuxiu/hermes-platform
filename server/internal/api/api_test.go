@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"com.hermes.platform/internal/auth"
 	"com.hermes.platform/internal/config"
 	"com.hermes.platform/internal/database"
 	"com.hermes.platform/internal/models"
+	"github.com/gin-gonic/gin"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 // initPermissions 初始化测试权限数据
@@ -79,7 +79,7 @@ func TestAuthRegister(t *testing.T) {
 
 	// 创建 Gin 引擎
 	router := gin.Default()
-	RegisterRoutes(router, db)
+	RegisterRoutes(router, db, cfg)
 
 	// 准备注册请求
 	payload := `{"name":"testuser","password":"test123","email":"test@example.com"}`
@@ -120,7 +120,7 @@ func TestAuthLogin(t *testing.T) {
 
 	// 创建 Gin 引擎
 	router := gin.Default()
-	RegisterRoutes(router, db)
+	RegisterRoutes(router, db, cfg)
 
 	// 先注册用户
 	registerPayload := `{"name":"testuser","password":"test123","email":"test@example.com"}`
@@ -171,7 +171,7 @@ func TestAuthChangePassword(t *testing.T) {
 
 	// 创建 Gin 引擎
 	router := gin.Default()
-	RegisterRoutes(router, db)
+	RegisterRoutes(router, db, cfg)
 
 	// 先注册用户
 	registerPayload := `{"name":"testuser","password":"test123","email":"test@example.com"}`
@@ -244,7 +244,7 @@ func TestAuthGetProfile(t *testing.T) {
 
 	// 创建 Gin 引擎
 	router := gin.Default()
-	RegisterRoutes(router, db)
+	RegisterRoutes(router, db, cfg)
 
 	// 先注册用户
 	registerPayload := `{"name":"testuser","password":"test123","email":"test@example.com"}`
@@ -303,7 +303,8 @@ func TestHealthCheck(t *testing.T) {
 
 	// 创建 Gin 引擎
 	router := gin.Default()
-	RegisterRoutes(router, db)
+	cfg := &config.Config{}
+	RegisterRoutes(router, db, cfg)
 
 	// 测试健康检查
 	healthReq, err := http.NewRequest("GET", "/health", nil)
@@ -341,7 +342,7 @@ func TestTestTasks(t *testing.T) {
 
 	// 创建 Gin 引擎
 	router := gin.Default()
-	RegisterRoutes(router, db)
+	RegisterRoutes(router, db, cfg)
 
 	// 先注册用户
 	registerPayload := `{"name":"testuser","password":"test123","email":"test@example.com"}`
@@ -408,5 +409,3 @@ func TestTestTasks(t *testing.T) {
 		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
 	}
 }
-
-

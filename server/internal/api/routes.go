@@ -2,14 +2,16 @@ package api
 
 import (
 	"com.hermes.platform/internal/auth"
+	"com.hermes.platform/internal/config"
 	"com.hermes.platform/internal/repository"
 	"com.hermes.platform/internal/services"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"gorm.io/gorm"
 )
 
-func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
+func RegisterRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
@@ -17,6 +19,11 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
+
+	otelCfg := cfg.GetOTelConfig()
+	if otelCfg.Enabled {
+		r.Use(otelgin.Middleware(otelCfg.ServiceName))
+	}
 
 	r.Use(func(c *gin.Context) {
 		c.Header("X-Content-Type-Options", "nosniff")
@@ -49,6 +56,10 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 
 	tokenService := services.NewAPITokenService(db)
 	tokenHandler := NewTokenHandler(tokenService)
+
+	projectRepo := repository.NewProjectRepository(db)
+	projectService := services.NewProjectService(projectRepo)
+	projectHandler := NewProjectHandler(projectService)
 
 	api := r.Group("/api")
 	{
@@ -129,6 +140,44 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				testRecords.POST("/:id/update", auth.PermissionMiddleware(permissionService, "test_record:edit"), testHandler.UpdateTestRecord)
 				testRecords.POST("/:id/delete", auth.PermissionMiddleware(permissionService, "test_record:delete"), testHandler.DeleteTestRecord)
 			}
+		}
+
+		projectRoutes := api.Group("/projects")
+		projectRoutes.Use(auth.AuthMiddleware())
+		{
+			projectRoutes.POST("", auth.PermissionMiddleware(permissionService, "project:create"), projectHandler.CreateProject)
+			projectRoutes.GET("", auth.PermissionMiddleware(permissionService, "project:view"), projectHandler.ListProjects)
+			projectRoutes.GET("/:id", auth.PermissionMiddleware(permissionService, "project:view"), projectHandler.GetProject)
+			projectRoutes.POST("/:id/update", auth.PermissionMiddleware(permissionService, "project:edit"), projectHandler.UpdateProject)
+			projectRoutes.POST("/:id/delete", auth.PermissionMiddleware(permissionService, "project:delete"), projectHandler.DeleteProject)
+
+			projectRoutes.POST("/:id/versions", auth.PermissionMiddleware(permissionService, "project:edit"), projectHandler.CreateVersion)
+			projectRoutes.GET("/:id/versions", auth.PermissionMiddleware(permissionService, "project:view"), projectHandler.ListVersions)
+			projectRoutes.GET("/versions/:id", auth.PermissionMiddleware(permissionService, "project:view"), projectHandler.GetVersion)
+			projectRoutes.POST("/versions/:id/update", auth.PermissionMiddleware(permissionService, "project:edit"), projectHandler.UpdateVersion)
+			projectRoutes.POST("/versions/:id/delete", auth.PermissionMiddleware(permissionService, "project:delete"), projectHandler.DeleteVersion)
+
+			projectRoutes.POST("/versions/:id/test-plans", auth.PermissionMiddleware(permissionService, "test_plan:create"), projectHandler.CreateTestPlan)
+			projectRoutes.GET("/versions/:id/test-plans", auth.PermissionMiddleware(permissionService, "test_plan:view"), projectHandler.ListTestPlans)
+			projectRoutes.GET("/test-plans/:id", auth.PermissionMiddleware(permissionService, "test_plan:view"), projectHandler.GetTestPlan)
+			projectRoutes.POST("/test-plans/:id/update", auth.PermissionMiddleware(permissionService, "test_plan:edit"), projectHandler.UpdateTestPlan)
+			projectRoutes.POST("/test-plans/:id/delete", auth.PermissionMiddleware(permissionService, "test_plan:delete"), projectHandler.DeleteTestPlan)
+
+			projectRoutes.POST("/test-plans/:id/test-cases", auth.PermissionMiddleware(permissionService, "test_case:create"), projectHandler.CreateTestCase)
+			projectRoutes.GET("/test-plans/:id/test-cases", auth.PermissionMiddleware(permissionService, "test_case:view"), projectHandler.ListTestCases)
+			projectRoutes.GET("/test-cases/:id", auth.PermissionMiddleware(permissionService, "test_case:view"), projectHandler.GetTestCase)
+			projectRoutes.GET("/test-cases/key/:caseKey", auth.PermissionMiddleware(permissionService, "test_case:view"), projectHandler.GetTestCaseByCaseKey)
+			projectRoutes.POST("/test-cases/:id/update", auth.PermissionMiddleware(permissionService, "test_case:edit"), projectHandler.UpdateTestCase)
+			projectRoutes.POST("/test-cases/:id/delete", auth.PermissionMiddleware(permissionService, "test_case:delete"), projectHandler.DeleteTestCase)
+		}
+
+		dictRoutes := api.Group("/dict")
+		dictRoutes.Use(auth.AuthMiddleware())
+		{
+			dictRoutes.GET("/test-case-statuses", projectHandler.GetTestCaseStatuses)
+			dictRoutes.GET("/priorities", projectHandler.GetPriorities)
+			dictRoutes.GET("/test-plan-statuses", projectHandler.GetTestPlanStatuses)
+			dictRoutes.GET("/version-statuses", projectHandler.GetVersionStatuses)
 		}
 	}
 }

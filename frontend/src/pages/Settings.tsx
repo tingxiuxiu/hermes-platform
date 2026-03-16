@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useThemeStore } from "@/stores/themeStore";
 import { authApi } from "@/services/authApi";
 import { tokenApi, type APIToken } from "@/services/tokenApi";
 import { LanguageSwitcher } from "@/components/ui/languageSwitcher";
@@ -12,6 +14,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 
 function Settings() {
   const { t } = useTranslation();
+  const { theme, setTheme } = useThemeStore();
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -86,7 +89,7 @@ function Settings() {
       } else {
         setMessage({ type: "error", text: response.error?.message || t("settings.passwordChangeFailed", "密码修改失败") });
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: "error", text: t("settings.networkError", "网络错误，请稍后重试") });
     } finally {
       setLoading(false);
@@ -318,9 +321,20 @@ function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-500 dark:text-slate-400">
-              {t("settings.themeComingSoon", "主题切换功能即将推出...")}
-            </p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t("settings.theme", "主题")}</Label>
+                <Select value={theme} onValueChange={(value) => setTheme(value as "light" | "dark")}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={t("settings.selectTheme", "选择主题")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">{t("settings.themeLight", "浅色")}</SelectItem>
+                    <SelectItem value="dark">{t("settings.themeDark", "深色")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

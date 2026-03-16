@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"com.hermes.platform/internal/config"
 	"com.hermes.platform/internal/database"
 	"com.hermes.platform/internal/middleware"
+	"com.hermes.platform/internal/telemetry"
 	"com.hermes.platform/internal/utils"
 )
 
@@ -23,6 +25,19 @@ func main() {
 
 	// 初始化 JWT 配置
 	auth.InitJWT(cfg)
+
+	// 初始化 OpenTelemetry
+	ctx := context.Background()
+	otelShutdown, err := telemetry.InitOTel(ctx, cfg.GetOTelConfig())
+	if err != nil {
+		log.Printf("Warning: Failed to initialize OpenTelemetry: %v", err)
+	} else if otelShutdown != nil {
+		defer func() {
+			if err := otelShutdown(ctx); err != nil {
+				log.Printf("Error shutting down OpenTelemetry: %v", err)
+			}
+		}()
+	}
 
 	// 初始化数据库
 	db, err := database.InitDB(cfg)
@@ -52,7 +67,7 @@ func main() {
 	r.Use(middleware.RateLimit(60, time.Minute))
 
 	// 注册 API 路由
-	api.RegisterRoutes(r, db)
+	api.RegisterRoutes(r, db, cfg)
 
 	// 启动服务器
 	serverAddr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)

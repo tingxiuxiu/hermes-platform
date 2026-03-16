@@ -52,7 +52,7 @@ function Profile() {
       } else {
         setMessage({ type: "error", text: response.error?.message || t("profile.updateFailed", "更新失败") });
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: "error", text: t("profile.networkError", "网络错误，请稍后重试") });
     } finally {
       setLoading(false);

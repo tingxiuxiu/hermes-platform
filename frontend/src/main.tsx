@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
+import './i18n/index.ts'
 import App from './App.tsx'
 import ProtectedRoute from './components/ProtectedRoute.tsx'
 import { useAuthStore } from './stores/authStore.ts'
@@ -16,6 +17,12 @@ const ExecutionDetail = lazy(() => import('./pages/ExecutionDetail.tsx'))
 const Settings = lazy(() => import('./pages/Settings.tsx'))
 const Profile = lazy(() => import('./pages/Profile.tsx'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword.tsx'))
+const ProjectList = lazy(() => import('./pages/project/ProjectList.tsx'))
+const VersionList = lazy(() => import('./pages/project/VersionList.tsx'))
+const TestPlanList = lazy(() => import('./pages/project/TestPlanList.tsx'))
+const TestCaseList = lazy(() => import('./pages/project/TestCaseList.tsx'))
+const TestPlansIndex = lazy(() => import('./pages/test-plans/Index.tsx'))
+const TestCasesIndex = lazy(() => import('./pages/test-cases/Index.tsx'))
 
 function RootRedirect() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -155,6 +162,66 @@ const router = createBrowserRouter([
           <ProtectedRoute>
             <Suspense fallback={<PageLoader />}>
               <Profile />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/projects',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <ProjectList />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/projects/:projectId/versions',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <VersionList />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/test-plans',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <TestPlansIndex />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/test-cases',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <TestCasesIndex />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/projects/:projectId/versions/:versionId/test-plans',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <TestPlanList />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/projects/:projectId/versions/:versionId/test-plans/:planId/test-cases',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <TestCaseList />
             </Suspense>
           </ProtectedRoute>
         ),

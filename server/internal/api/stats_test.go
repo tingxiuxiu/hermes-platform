@@ -33,7 +33,7 @@ func setupStatsTest(t *testing.T) (*gin.Engine, *gorm.DB, string) {
 	database.AutoMigrate(db)
 
 	router := gin.Default()
-	RegisterRoutes(router, db)
+	RegisterRoutes(router, db, cfg)
 
 	registerPayload := `{"name":"testuser","password":"test123","email":"test@example.com"}`
 	registerReq, _ := http.NewRequest("POST", "/api/auth/register", strings.NewReader(registerPayload))

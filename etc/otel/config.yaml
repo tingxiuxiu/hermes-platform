@@ -1,0 +1,46 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 512
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+  probabilistic_sampler:
+    sampling_percentage: 100
+
+exporters:
+  otlphttp/openobserve:
+    endpoint: ${env:OPENOBSERVE_URL}
+    headers:
+      Authorization: Basic ${env:OPENOBSERVE_AUTH}
+
+service:
+  pipelines:
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters:
+        - otlphttp/openobserve
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters:
+        - otlphttp/openobserve
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters:
+        - otlphttp/openobserve

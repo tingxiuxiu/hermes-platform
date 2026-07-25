@@ -1,0 +1,123 @@
+version: "3.8"
+
+services:
+  # ==================== Application Services ====================
+
+  # Frontend - React Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080/api
+      - VITE_WS_URL=ws://localhost:8080/ws
+    depends_on:
+      - server
+    networks:
+      - hermes-network
+    restart: unless-stopped
+
+  # Backend - Go Server
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8080
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=hermes
+      - DATABASE_PASSWORD=hermes123
+      - DATABASE_DBName=hermes
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=hermes-jwt-secret-key-change-in-production
+      - JWT_EXPIRATION=24
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - hermes-network
+    restart: unless-stopped
+
+  # ==================== Database Services ====================
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:18
+    environment:
+      - POSTGRES_USER=hermes
+      - POSTGRES_PASSWORD=hermes123
+      - POSTGRES_DB=hermes
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./server/init_database.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hermes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hermes-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:8
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - hermes-network
+    restart: unless-stopped
+
+  # ==================== OpenObserve ====================
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:latest
+    environment:
+      ZO_ROOT_USER_EMAIL: ${OPENOBSERVE_EMAIL?Variable not set}
+      ZO_ROOT_USER_PASSWORD: ${OPENOBSERVE_PASSWORD?Variable not set}
+      ZO_DATA_DIR: /data
+      # 单机模式
+      ZO_LOCAL_MODE: true
+    volumes:
+      - ./data/openobserve:/data
+    ports:
+      - "5080:5080"
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command:
+      - "--config=/etc/otel/config.yaml"
+    volumes:
+      - ./etc/otel/config.yaml:/etc/otel/config.yaml
+    ports:
+      # OTLP grpc
+      - "4317:4317"
+      # OTLP http
+      - "4318:4318"
+      # metrics
+      - "8889:8889"
+    depends_on:
+      - openobserve
+
+# ==================== Networks & Volumes ====================
+networks:
+  hermes-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:

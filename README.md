@@ -33,12 +33,14 @@
 <td width="50%">
 
 ### 🔐 安全认证
+
 - RSA 加密登录传输
 - JWT 无状态认证
 - API Token 长效访问 (365天)
 - 基于角色的权限控制 (RBAC)
 
 ### 📊 测试管理
+
 - 测试任务 CRUD 操作
 - 测试用例详情管理
 - 执行历史记录追踪
@@ -48,12 +50,14 @@
 <td width="50%">
 
 ### 🛠️ 开发者友好
+
 - RESTful API 设计
 - 完整的 TypeScript 类型支持
 - 热重载开发模式
 - 详细的 API 文档
 
 ### 🌍 国际化
+
 - 中英文切换支持
 - 响应式布局设计
 - 现代化 UI (shadcn/ui)
@@ -66,24 +70,26 @@
 ## 🏗️ 技术栈
 
 ### 后端
-| 技术 | 用途 | 版本 |
-|------|------|------|
-| [Go](https://golang.org) | 主要语言 | 1.25+ |
-| [Gin](https://gin-gonic.com) | Web 框架 | v1.12 |
-| [GORM](https://gorm.io) | ORM 框架 | v1.31 |
-| [PostgreSQL](https://postgresql.org) | 主数据库 | 14+ |
-| [Redis](https://redis.io) | 缓存 | 6+ |
-| [JWT](https://jwt.io) | 身份认证 | v5 |
+
+| 技术                                 | 用途     | 版本  |
+| ------------------------------------ | -------- | ----- |
+| [Go](https://golang.org)             | 主要语言 | 1.25+ |
+| [Gin](https://gin-gonic.com)         | Web 框架 | v1.12 |
+| [GORM](https://gorm.io)              | ORM 框架 | v1.31 |
+| [PostgreSQL](https://postgresql.org) | 主数据库 | 14+   |
+| [Redis](https://redis.io)            | 缓存     | 6+    |
+| [JWT](https://jwt.io)                | 身份认证 | v5    |
 
 ### 前端
-| 技术 | 用途 | 版本 |
-|------|------|------|
-| [React](https://react.dev) | UI 框架 | 19 |
-| [TypeScript](https://typescriptlang.org) | 类型安全 | 5.9 |
-| [Vite](https://vitejs.dev) | 构建工具 | 7 |
-| [Tailwind CSS](https://tailwindcss.com) | 样式框架 | 4 |
-| [shadcn/ui](https://ui.shadcn.com) | 组件库 | latest |
-| [Zustand](https://zustand-demo.pmnd.rs) | 状态管理 | 5 |
+
+| 技术                                     | 用途     | 版本   |
+| ---------------------------------------- | -------- | ------ |
+| [React](https://react.dev)               | UI 框架  | 19     |
+| [TypeScript](https://typescriptlang.org) | 类型安全 | 5.9    |
+| [Vite](https://vitejs.dev)               | 构建工具 | 7      |
+| [Tailwind CSS](https://tailwindcss.com)  | 样式框架 | 4      |
+| [shadcn/ui](https://ui.shadcn.com)       | 组件库   | latest |
+| [Zustand](https://zustand-demo.pmnd.rs)  | 状态管理 | 5      |
 
 ## 🚀 快速开始
 
@@ -104,6 +110,9 @@ cd hermes-platform
 ### 2️⃣ 启动后端
 
 ```bash
+echo -n \
+"admin@example.com:Admin@123456" \
+| base64
 cd server
 
 # 安装依赖
@@ -193,14 +202,14 @@ hermes-platform/
 
 ## 🔒 安全特性
 
-| 特性 | 说明 |
-|------|------|
-| 🔐 **RSA 加密** | 登录密码使用 RSA 公钥加密传输 |
-| 🎫 **JWT 认证** | 无状态身份验证，支持 Token 过期 |
-| 🔑 **API Token** | 365 天有效期，支持撤销 |
-| 🛡️ **密码哈希** | bcrypt 加密存储 |
-| 👥 **RBAC** | 基于角色的访问控制 |
-| ⚡ **速率限制** | API 请求频率限制 |
+| 特性             | 说明                            |
+| ---------------- | ------------------------------- |
+| 🔐 **RSA 加密**  | 登录密码使用 RSA 公钥加密传输   |
+| 🎫 **JWT 认证**  | 无状态身份验证，支持 Token 过期 |
+| 🔑 **API Token** | 365 天有效期，支持撤销          |
+| 🛡️ **密码哈希**  | bcrypt 加密存储                 |
+| 👥 **RBAC**      | 基于角色的访问控制              |
+| ⚡ **速率限制**  | API 请求频率限制                |
 
 ## 🧪 测试
 
@@ -261,12 +270,14 @@ redis:
 <td width="50%">
 
 ### 🔐 Security
+
 - RSA encrypted login transmission
 - JWT stateless authentication
 - API Token long-term access (365 days)
 - Role-based access control (RBAC)
 
 ### 📊 Test Management
+
 - Test task CRUD operations
 - Test case detail management
 - Execution history tracking
@@ -276,12 +287,14 @@ redis:
 <td width="50%">
 
 ### 🛠️ Developer Friendly
+
 - RESTful API design
 - Complete TypeScript type support
 - Hot reload development mode
 - Detailed API documentation
 
 ### 🌍 Internationalization
+
 - Chinese/English language switch
 - Responsive layout design
 - Modern UI (shadcn/ui)
@@ -294,24 +307,26 @@ redis:
 ## 🏗️ Tech Stack
 
 ### Backend
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| [Go](https://golang.org) | Main Language | 1.25+ |
-| [Gin](https://gin-gonic.com) | Web Framework | v1.12 |
-| [GORM](https://gorm.io) | ORM Framework | v1.31 |
-| [PostgreSQL](https://postgresql.org) | Database | 14+ |
-| [Redis](https://redis.io) | Cache | 6+ |
-| [JWT](https://jwt.io) | Authentication | v5 |
+
+| Technology                           | Purpose        | Version |
+| ------------------------------------ | -------------- | ------- |
+| [Go](https://golang.org)             | Main Language  | 1.25+   |
+| [Gin](https://gin-gonic.com)         | Web Framework  | v1.12   |
+| [GORM](https://gorm.io)              | ORM Framework  | v1.31   |
+| [PostgreSQL](https://postgresql.org) | Database       | 14+     |
+| [Redis](https://redis.io)            | Cache          | 6+      |
+| [JWT](https://jwt.io)                | Authentication | v5      |
 
 ### Frontend
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| [React](https://react.dev) | UI Framework | 19 |
-| [TypeScript](https://typescriptlang.org) | Type Safety | 5.9 |
-| [Vite](https://vitejs.dev) | Build Tool | 7 |
-| [Tailwind CSS](https://tailwindcss.com) | Styling | 4 |
-| [shadcn/ui](https://ui.shadcn.com) | Component Library | latest |
-| [Zustand](https://zustand-demo.pmnd.rs) | State Management | 5 |
+
+| Technology                               | Purpose           | Version |
+| ---------------------------------------- | ----------------- | ------- |
+| [React](https://react.dev)               | UI Framework      | 19      |
+| [TypeScript](https://typescriptlang.org) | Type Safety       | 5.9     |
+| [Vite](https://vitejs.dev)               | Build Tool        | 7       |
+| [Tailwind CSS](https://tailwindcss.com)  | Styling           | 4       |
+| [shadcn/ui](https://ui.shadcn.com)       | Component Library | latest  |
+| [Zustand](https://zustand-demo.pmnd.rs)  | State Management  | 5       |
 
 ## 🚀 Quick Start
 
@@ -421,14 +436,14 @@ hermes-platform/
 
 ## 🔒 Security Features
 
-| Feature | Description |
-|---------|-------------|
-| 🔐 **RSA Encryption** | Login passwords encrypted with RSA public key |
-| 🎫 **JWT Auth** | Stateless authentication with token expiration |
-| 🔑 **API Token** | 365 days validity, revocable |
-| 🛡️ **Password Hash** | bcrypt encrypted storage |
-| 👥 **RBAC** | Role-based access control |
-| ⚡ **Rate Limiting** | API request frequency limit |
+| Feature               | Description                                    |
+| --------------------- | ---------------------------------------------- |
+| 🔐 **RSA Encryption** | Login passwords encrypted with RSA public key  |
+| 🎫 **JWT Auth**       | Stateless authentication with token expiration |
+| 🔑 **API Token**      | 365 days validity, revocable                   |
+| 🛡️ **Password Hash**  | bcrypt encrypted storage                       |
+| 👥 **RBAC**           | Role-based access control                      |
+| ⚡ **Rate Limiting**  | API request frequency limit                    |
 
 ## 🧪 Testing
 

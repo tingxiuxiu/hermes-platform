@@ -20,7 +20,12 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from app.models.hdp import Base
+from app.models import Base
+# 关键：先导入所有模型模块，触发注册到 Base.metadata
+import app.auth.models
+import app.automation.models
+import app.dashboard.models
+import app.sys_mgmt.models
 
 target_metadata = Base.metadata
 

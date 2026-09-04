@@ -1,4 +1,5 @@
 import {
+  Bot,
   Construction,
   LayoutDashboard,
   Monitor,
@@ -33,9 +34,9 @@ export const sidebarData: SidebarData = {
   },
   teams: [
     {
-      name: 'Shadcn Admin',
+      name: 'TAP',
       logo: Command,
-      plan: 'Vite + ShadcnUI',
+      plan: 'Enterprise',
     },
     {
       name: 'Acme Inc',
@@ -61,6 +62,20 @@ export const sidebarData: SidebarData = {
           title: 'Tasks',
           url: '/tasks',
           icon: ListTodo,
+        },
+        {
+          title: 'Automation',
+          icon: Bot,
+          items: [
+            {
+              title: 'Automation Job',
+              url: '/automation/jobs',
+            },
+            {
+              title: 'Job Execution',
+              url: '/automation/executions',
+            },
+          ],
         },
         {
           title: 'Apps',

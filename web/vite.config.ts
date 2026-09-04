@@ -19,10 +19,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/hermes-platform/api': {
+      '/tap/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
+        timeout: 0,
+        proxyTimeout: 0,
       },
     },
   },

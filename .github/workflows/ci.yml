@@ -1,0 +1,89 @@
+# CI 流水线（T-10.6）：go-service 全量门禁
+#
+# 步骤：lint → vet → 迁移校验 → 集成测试(-race) → contract-diff
+# 集成测试需要真实 PG + Redis，用 GitHub Actions service containers 提供。
+#
+# 前置：代码变更在 go-service/ 下触发。
+
+name: go-service CI
+
+on:
+  push:
+    paths:
+      - "go-service/**"
+      - "service/src/app/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "go-service/**"
+      - "service/src/app/**"
+
+env:
+  GO_VERSION: "1.26"
+  # 测试库配置（service containers 提供）
+  TEST_DATABASE_URL: "postgres://hermes:hermes123@localhost:5432/hermes_test?sslmode=disable"
+  TEST_REDIS_DB: "15"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: hermes
+          POSTGRES_PASSWORD: hermes123
+          POSTGRES_DB: hermes_test
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U hermes"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8
+        ports:
+          - "6379:6379"
+
+    defaults:
+      run:
+        working-directory: go-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go-service/go.sum
+
+      # 1. 静态检查
+      - name: gofmt check
+        run: |
+          gofmt -l . && test -z "$(gofmt -l .)"
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: go-service
+          args: --config .golangci.yml
+
+      # 2. 迁移校验（临时库验证 up→down→up 可逆）
+      - name: migrate verify
+        run: go run ./cmd/migrate -cmd verify -dsn "postgres://hermes:hermes123@localhost:5432/hermes_test?sslmode=disable"
+
+      # 3. 集成测试（含竞态检测；CI 的 Linux 自带 gcc）
+      - name: integration tests (-race)
+        run: go test -race ./... -count=1
+
+      # 4. 契约一致性校验
+      - name: contract-diff
+        run: |
+          go run ./tools/contract-diff \
+            -python "${{ github.workspace }}/service/src/app" \
+            -go "${{ github.workspace }}/go-service/internal/adapter/http"

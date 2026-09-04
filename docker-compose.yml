@@ -1,43 +1,46 @@
-version: "3.8"
-
 services:
-  # ==================== Application Services ====================
-
-  # Frontend - React Application
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: ./web
+      dockerfile: ../docker/Dockerfile.frontend
+      args:
+        VITE_API_BASE_URL: /
     ports:
-      - "5173:5173"
-    environment:
-      - VITE_API_BASE_URL=http://localhost:8080/api
-      - VITE_WS_URL=ws://localhost:8080/ws
+      - "5173:80"
     depends_on:
-      - server
+      - backend
     networks:
       - hermes-network
     restart: unless-stopped
 
-  # Backend - Go Server
-  server:
+  backend:
     build:
-      context: ./server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: service/Dockerfile
+    env_file:
+      - path: ./service/.env
+        required: false
+    environment:
+      PROJECT_NAME: ${PROJECT_NAME:-Hermes Platform}
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost:5173}
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: hermes123
+      POSTGRES_DB: hermes
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      FIRST_SUPERUSER: ${FIRST_SUPERUSER:-admin@example.com}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:-change-this-admin-password}
+      AUTOMATION_SERVICE_TOKEN: ${AUTOMATION_SERVICE_TOKEN:-change-this-service-token}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     ports:
       - "8080:8080"
-    environment:
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=8080
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_USER=hermes
-      - DATABASE_PASSWORD=hermes123
-      - DATABASE_DBName=hermes
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - JWT_SECRET=hermes-jwt-secret-key-change-in-production
-      - JWT_EXPIRATION=24
+    command: >-
+      sh -c "pdm run alembic upgrade head && python -m uvicorn app.main:app --host 0.0.0.0 --port 8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,9 +50,171 @@ services:
       - hermes-network
     restart: unless-stopped
 
-  # ==================== Database Services ====================
+  celery-worker:
+    build:
+      context: .
+      dockerfile: service/Dockerfile
+    env_file:
+      - path: ./service/.env
+        required: false
+    environment:
+      PROJECT_NAME: ${PROJECT_NAME:-Hermes Platform}
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost:5173}
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: hermes123
+      POSTGRES_DB: hermes
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      FIRST_SUPERUSER: ${FIRST_SUPERUSER:-admin@example.com}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:-change-this-admin-password}
+      AUTOMATION_SERVICE_TOKEN: ${AUTOMATION_SERVICE_TOKEN:-change-this-service-token}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    command: pdm run celery-worker
+    depends_on:
+      - backend
+    networks:
+      - hermes-network
+    restart: unless-stopped
 
-  # PostgreSQL Database
+  celery-beat:
+    build:
+      context: .
+      dockerfile: service/Dockerfile
+    env_file:
+      - path: ./service/.env
+        required: false
+    environment:
+      PROJECT_NAME: ${PROJECT_NAME:-Hermes Platform}
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost:5173}
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: hermes123
+      POSTGRES_DB: hermes
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      FIRST_SUPERUSER: ${FIRST_SUPERUSER:-admin@example.com}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:-change-this-admin-password}
+      AUTOMATION_SERVICE_TOKEN: ${AUTOMATION_SERVICE_TOKEN:-change-this-service-token}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    command: pdm run celery-beat
+    depends_on:
+      - backend
+    networks:
+      - hermes-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # Go 服务（迁移后的后端）：api / worker / scheduler + migrate 一次性容器
+  # ============================================================================
+
+  api:
+    build:
+      context: ./go-service
+      dockerfile: Dockerfile
+    environment:
+      HTTP_PORT: "8081"
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: hermes123
+      POSTGRES_DB: hermes
+      POSTGRES_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      AUTOMATION_SERVICE_TOKEN: ${AUTOMATION_SERVICE_TOKEN:-change-this-service-token}
+      FIRST_SUPERUSER: ${FIRST_SUPERUSER:-admin@example.com}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:-change-this-admin-password}
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4318
+    command: ["api"]
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - hermes-network
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./go-service
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: hermes123
+      POSTGRES_DB: hermes
+      POSTGRES_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4318
+    command: ["worker"]
+    depends_on:
+      - api
+    networks:
+      - hermes-network
+    restart: unless-stopped
+
+  scheduler:
+    build:
+      context: ./go-service
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: hermes123
+      POSTGRES_DB: hermes
+      POSTGRES_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      AUTOMATION_DASHBOARD_REFRESH_SECONDS: "60"
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4318
+    # ⚠️ 单实例约束：scheduler 多副本会重复投递 refresh:all（见 docs/01-architecture.md §4）
+    deploy:
+      replicas: 1
+    command: ["scheduler"]
+    depends_on:
+      - api
+    networks:
+      - hermes-network
+    restart: unless-stopped
+
+  # 一次性迁移容器：应用全部迁移后退出（exit 0 表示成功）
+  migrate:
+    build:
+      context: ./go-service
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: hermes123
+      POSTGRES_DB: hermes
+      POSTGRES_SSLMODE: disable
+    command: ["migrate", "-cmd", "up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hermes-network
+    restart: "no"
+
   postgres:
     image: postgres:18
     environment:
@@ -58,7 +223,6 @@ services:
       - POSTGRES_DB=hermes
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./server/init_database.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -70,7 +234,6 @@ services:
       - hermes-network
     restart: unless-stopped
 
-  # Redis Cache
   redis:
     image: redis:8
     ports:
@@ -82,7 +245,6 @@ services:
       - hermes-network
     restart: unless-stopped
 
-  # ==================== OpenObserve ====================
   openobserve:
     image: public.ecr.aws/zinclabs/openobserve:latest
     environment:
@@ -95,6 +257,8 @@ services:
       - ./data/openobserve:/data
     ports:
       - "5080:5080"
+    networks:
+      - hermes-network
     restart: unless-stopped
 
   otel-collector:
@@ -112,8 +276,10 @@ services:
       - "8889:8889"
     depends_on:
       - openobserve
+    networks:
+      - hermes-network
+    restart: unless-stopped
 
-# ==================== Networks & Volumes ====================
 networks:
   hermes-network:
     driver: bridge

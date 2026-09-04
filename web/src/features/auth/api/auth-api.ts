@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { API_V1 } from '@/lib/api-prefix'
 
 // ─── Request Shapes ───────────────────────────────────────────────────────────
 
@@ -48,10 +49,8 @@ export interface LoginResponse {
 
 // ─── API Functions ─────────────────────────────────────────────────────────────
 
-const API_V1 = '/hermes-platform/api/v1'
-
 /**
- * JSON-body login — calls POST /hermes-platform/api/v1/login
+ * JSON-body login — POST /tap/api/v1/login
  */
 export async function loginApi(payload: LoginRequest): Promise<LoginResponse> {
   const { data } = await api.post<LoginResponse>(`${API_V1}/login`, payload)
@@ -59,7 +58,7 @@ export async function loginApi(payload: LoginRequest): Promise<LoginResponse> {
 }
 
 /**
- * Logout — calls POST /hermes-platform/api/v1/logout
+ * Logout — POST /tap/api/v1/logout
  * Requires the token to be present in the axios interceptor.
  */
 export async function logoutApi(): Promise<void> {

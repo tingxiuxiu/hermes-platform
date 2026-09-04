@@ -39,6 +39,9 @@ import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedAutomationJobsIndexRouteImport } from './routes/_authenticated/automation/jobs/index'
+import { Route as AuthenticatedAutomationExecutionsIndexRouteImport } from './routes/_authenticated/automation/executions/index'
+import { Route as AuthenticatedAutomationExecutionsBuildUidRouteImport } from './routes/_authenticated/automation/executions/$buildUid'
 
 const ClerkRouteRoute = ClerkRouteRouteImport.update({
   id: '/clerk',
@@ -196,6 +199,24 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAutomationJobsIndexRoute =
+  AuthenticatedAutomationJobsIndexRouteImport.update({
+    id: '/automation/jobs/',
+    path: '/automation/jobs/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAutomationExecutionsIndexRoute =
+  AuthenticatedAutomationExecutionsIndexRouteImport.update({
+    id: '/automation/executions/',
+    path: '/automation/executions/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAutomationExecutionsBuildUidRoute =
+  AuthenticatedAutomationExecutionsBuildUidRouteImport.update({
+    id: '/automation/executions/$buildUid',
+    path: '/automation/executions/$buildUid',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -225,6 +246,9 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
+  '/automation/executions/$buildUid': typeof AuthenticatedAutomationExecutionsBuildUidRoute
+  '/automation/executions/': typeof AuthenticatedAutomationExecutionsIndexRoute
+  '/automation/jobs/': typeof AuthenticatedAutomationJobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -253,6 +277,9 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/automation/executions/$buildUid': typeof AuthenticatedAutomationExecutionsBuildUidRoute
+  '/automation/executions': typeof AuthenticatedAutomationExecutionsIndexRoute
+  '/automation/jobs': typeof AuthenticatedAutomationJobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -286,6 +313,9 @@ export interface FileRoutesById {
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/automation/executions/$buildUid': typeof AuthenticatedAutomationExecutionsBuildUidRoute
+  '/_authenticated/automation/executions/': typeof AuthenticatedAutomationExecutionsIndexRoute
+  '/_authenticated/automation/jobs/': typeof AuthenticatedAutomationJobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -317,6 +347,9 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/tasks/'
     | '/users/'
+    | '/automation/executions/$buildUid'
+    | '/automation/executions/'
+    | '/automation/jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/clerk'
@@ -345,6 +378,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/automation/executions/$buildUid'
+    | '/automation/executions'
+    | '/automation/jobs'
   id:
     | '__root__'
     | '/_authenticated'
@@ -377,6 +413,9 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
+    | '/_authenticated/automation/executions/$buildUid'
+    | '/_authenticated/automation/executions/'
+    | '/_authenticated/automation/jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -606,6 +645,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/automation/jobs/': {
+      id: '/_authenticated/automation/jobs/'
+      path: '/automation/jobs'
+      fullPath: '/automation/jobs/'
+      preLoaderRoute: typeof AuthenticatedAutomationJobsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/automation/executions/': {
+      id: '/_authenticated/automation/executions/'
+      path: '/automation/executions'
+      fullPath: '/automation/executions/'
+      preLoaderRoute: typeof AuthenticatedAutomationExecutionsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/automation/executions/$buildUid': {
+      id: '/_authenticated/automation/executions/$buildUid'
+      path: '/automation/executions/$buildUid'
+      fullPath: '/automation/executions/$buildUid'
+      preLoaderRoute: typeof AuthenticatedAutomationExecutionsBuildUidRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -641,6 +701,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
+  AuthenticatedAutomationExecutionsBuildUidRoute: typeof AuthenticatedAutomationExecutionsBuildUidRoute
+  AuthenticatedAutomationExecutionsIndexRoute: typeof AuthenticatedAutomationExecutionsIndexRoute
+  AuthenticatedAutomationJobsIndexRoute: typeof AuthenticatedAutomationJobsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -652,6 +715,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
+  AuthenticatedAutomationExecutionsBuildUidRoute:
+    AuthenticatedAutomationExecutionsBuildUidRoute,
+  AuthenticatedAutomationExecutionsIndexRoute:
+    AuthenticatedAutomationExecutionsIndexRoute,
+  AuthenticatedAutomationJobsIndexRoute: AuthenticatedAutomationJobsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -1,0 +1,125 @@
+# golangci-lint 配置（T-10.2）
+#
+# 核心：depguard 强制分层依赖方向（ADR-0004）——
+#   domain       不得 import application / adapter / platform
+#   application  不得 import adapter / platform（可 import domain）
+#   adapter      不得 import adapter 的其他层 / platform（可 import application / domain）
+#   bootstrap    唯一允许 import 所有层的包
+#
+# 运行：make lint（需先安装 golangci-lint）
+
+run:
+  timeout: 5m
+  tests: true
+  skip-dirs:
+    - bin
+    - tools
+
+linters:
+  enable:
+    - depguard        # 依赖方向
+    - govet
+    - errcheck        # 未检查错误
+    - ineffassign     # 无效赋值
+    - staticcheck     # 静态检查
+    - unused          # 未使用
+    - gofmt
+  disable:
+    - gocritic        # 过严格，非阻塞
+    - gosec           # 安全扫描非阻塞
+  presets:
+    - bugs
+    - unused
+
+linters-settings:
+  depguard:
+    rules:
+      domain:
+        files:
+          - "internal/domain/**/*.go"
+        allow:
+          - $gostd
+          - github.com/google/uuid
+          - github.com/hermes-platform/go-service/internal/platform/errors
+        deny:
+          - pkg: "github.com/gin-gonic"
+            desc: "domain 层不得依赖 HTTP 框架"
+          - pkg: "github.com/jackc/pgx"
+            desc: "domain 层不得依赖数据库驱动"
+          - pkg: "github.com/hermes-platform/go-service/internal/adapter"
+            desc: "domain 层不得依赖 adapter（依赖方向反转）"
+          - pkg: "github.com/hermes-platform/go-service/internal/application"
+            desc: "domain 层不得依赖 application（依赖方向反转）"
+
+      application:
+        files:
+          - "internal/application/**/*.go"
+        allow:
+          - $gostd
+          - github.com/google/uuid
+          - github.com/hermes-platform/go-service/internal/domain
+          - github.com/hermes-platform/go-service/internal/platform/errors
+          - github.com/hermes-platform/go-service/internal/platform/database
+        deny:
+          - pkg: "github.com/gin-gonic"
+            desc: "application 层不得依赖 HTTP 框架"
+          - pkg: "github.com/jackc/pgx"
+            desc: "application 层不得直接依赖数据库驱动（用 ports + platform/database）"
+          - pkg: "github.com/hermes-platform/go-service/internal/adapter"
+            desc: "application 层不得依赖 adapter（依赖方向反转）"
+
+      adapter-persistence:
+        files:
+          - "internal/adapter/persistence/**/*.go"
+        allow:
+          - $gostd
+          - github.com/google/uuid
+          - github.com/jackc/pgx
+          - github.com/hermes-platform/go-service/internal/domain
+          - github.com/hermes-platform/go-service/internal/application
+          - github.com/hermes-platform/go-service/internal/platform/database
+          - github.com/hermes-platform/go-service/internal/platform/errors
+        deny:
+          - pkg: "github.com/gin-gonic"
+            desc: "persistence 层不得依赖 HTTP 框架"
+
+      adapter-http:
+        files:
+          - "internal/adapter/http/**/*.go"
+        allow:
+          - $gostd
+          - github.com/gin-gonic
+          - github.com/google/uuid
+          - github.com/hermes-platform/go-service/internal/domain
+          - github.com/hermes-platform/go-service/internal/application
+          - github.com/hermes-platform/go-service/internal/adapter/http/middleware
+          - github.com/hermes-platform/go-service/internal/platform/config
+          - github.com/hermes-platform/go-service/internal/platform/errors
+          - github.com/hermes-platform/go-service/internal/platform/response
+          - github.com/hermes-platform/go-service/internal/platform/authn
+        deny:
+          - pkg: "github.com/jackc/pgx"
+            desc: "http 层不得直接依赖数据库驱动"
+
+      platform:
+        files:
+          - "internal/platform/**/*.go"
+        allow:
+          - $gostd
+          - github.com/gin-gonic
+          - github.com/jackc/pgx
+          - github.com/google/uuid
+          - github.com/redis/go-redis
+          - github.com/hibiken/asynq
+          - github.com/golang-jwt/jwt
+          - github.com/spf13/viper
+          - github.com/golang-migrate/migrate
+          - go.opentelemetry.io/otel
+          - go.opentelemetry.io/contrib
+        deny:
+          - pkg: "github.com/hermes-platform/go-service/internal/adapter"
+            desc: "platform 层不得依赖 adapter（基础层不得依赖实现层）"
+          - pkg: "github.com/hermes-platform/go-service/internal/application"
+            desc: "platform 层不得依赖 application"
+          - pkg: "github.com/hermes-platform/go-service/internal/domain"
+            desc: "platform 层不得依赖 domain"

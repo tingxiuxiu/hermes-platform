@@ -1,12 +1,11 @@
 import { api } from '@/lib/api'
+import { API_V1 } from '@/lib/api-prefix'
 import {
   type PermissionItem,
   type RoleItem,
   type User,
   type UserStatus,
 } from '../data/schema'
-
-const API_V1 = '/hermes-platform/api/v1'
 
 export type BackendRole = RoleItem
 export type BackendPermission = PermissionItem

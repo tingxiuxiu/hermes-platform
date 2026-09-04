@@ -6,7 +6,6 @@ from pydantic import (
     AnyUrl,
     BeforeValidator,
     EmailStr,
-    HttpUrl,
     PostgresDsn,
     computed_field,
     model_validator,
@@ -28,9 +27,11 @@ class Settings(BaseSettings):
         env_ignore_empty=True,
         extra="ignore",
     )
-    API_V1_STR: str = "/hermes-platform/api/v1"
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    API_V1_STR: str = "/tap/api/v1"
+    SECRET_KEY: str = "yqVeBt_e1CJeSWYel2DGOVJRxNZiTadofeIjmHE4jjw"
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 24 * 7
+    # 自动化用例上报接口的独立服务令牌 (CI/pytest Runner 使用)，与用户登录 JWT 区分
+    AUTOMATION_SERVICE_TOKEN: str = "changethis"
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
@@ -78,6 +79,18 @@ class Settings(BaseSettings):
     REDIS_SOCKET_TIMEOUT: int = 5  # 读写超时
     REDIS_RETRY_ON_TIMEOUT: bool = True
 
+    CELERY_BROKER_URL: str | None = None
+    CELERY_RESULT_BACKEND: str | None = None
+    CELERY_TASK_ALWAYS_EAGER: bool = False
+    AUTOMATION_DASHBOARD_REFRESH_SECONDS: int = 60
+    AUTOMATION_DASHBOARD_TREND_DAYS: int = 7
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def redis_url(self) -> str:
+        auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
+        return f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
     SMTP_PORT: int = 587
@@ -121,6 +134,9 @@ class Settings(BaseSettings):
         self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
         self._check_default_secret(
             "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
+        )
+        self._check_default_secret(
+            "AUTOMATION_SERVICE_TOKEN", self.AUTOMATION_SERVICE_TOKEN
         )
 
         return self

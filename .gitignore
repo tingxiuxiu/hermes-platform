@@ -28,9 +28,15 @@ yarn-debug.log*
 yarn-error.log*
 
 .trae
+.workbuddy
 
 frontend/dist
 frontend/node_modules
 
 main.exe
 server.exe
+.idea/
+go-service/bin/api.exe
+go-service/bin/migrate.exe
+go-service/bin/scheduler.exe
+go-service/bin/worker.exe

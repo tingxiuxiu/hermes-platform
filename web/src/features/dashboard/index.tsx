@@ -1,3 +1,7 @@
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
+import { FilterX, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -6,213 +10,314 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-import { TopNav } from '@/components/layout/top-nav'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { Analytics } from './components/analytics'
-import { Overview } from './components/overview'
-import { RecentSales } from './components/recent-sales'
+import {
+  type DashboardRunningExecution,
+  getDashboardOverview,
+} from './api/dashboard-api'
+import { AutomationOverviewChart } from './components/automation-overview-chart'
+import { AutomationSummaryCards } from './components/automation-summary-cards'
+import { RunningExecutionDialog } from './components/running-execution-dialog'
+import { RunningExecutions } from './components/running-executions'
 
-export function Dashboard() {
+type DashboardSearch = {
+  days?: number
+  jobId?: number
+  jobName?: string
+}
+
+type DashboardNavigate = (options: {
+  search: (prev: DashboardSearch) => DashboardSearch
+}) => Promise<void>
+
+const DAY_OPTIONS = [7, 14, 30] as const
+
+export function Dashboard({
+  search,
+  navigate,
+}: {
+  search: DashboardSearch
+  navigate: DashboardNavigate
+}) {
+  const [selectedExecution, setSelectedExecution] =
+    useState<DashboardRunningExecution | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [jobNameInput, setJobNameInput] = useState(search.jobName ?? '')
+  const selectedDays = search.days ?? 7
+
+  useEffect(() => {
+    setJobNameInput(search.jobName ?? '')
+  }, [search.jobName])
+
+  const overviewQuery = useQuery({
+    queryKey: ['dashboard', 'automation-overview', search],
+    queryFn: () =>
+      getDashboardOverview({
+        days: selectedDays,
+        jobId: search.jobId,
+        jobName: search.jobName,
+      }),
+  })
+
+  const data = overviewQuery.data
+
+  const hasFilters = Boolean(
+    search.jobId || search.jobName || search.days !== undefined
+  )
+
+  async function applyFilters() {
+    const normalizedJobName = jobNameInput.trim()
+    await navigate({
+      search: (prev) => ({
+        ...prev,
+        days: selectedDays,
+        jobId: prev.jobId,
+        jobName: normalizedJobName || undefined,
+      }),
+    })
+  }
+
+  async function resetFilters() {
+    setJobNameInput('')
+    await navigate({
+      search: () => ({
+        days: undefined,
+        jobId: undefined,
+        jobName: undefined,
+      }),
+    })
+  }
+
+  const executionListSearch = {
+    jobId: search.jobId,
+    jobName: search.jobName ?? '',
+    page: 1,
+    pageSize: 10,
+    status: [],
+  }
+
   return (
     <>
-      {/* ===== Top Heading ===== */}
-      <Header>
-        <TopNav links={topNav} className='me-auto' />
-        <Search />
+      <Header fixed>
+        <Search className='me-auto' />
         <ThemeSwitch />
         <ConfigDrawer />
         <ProfileDropdown />
       </Header>
 
-      {/* ===== Main ===== */}
-      <Main>
-        <div className='mb-2 flex items-center justify-between space-y-2'>
-          <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
-          <div className='flex items-center space-x-2'>
-            <Button>Download</Button>
+      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
+        <div className='flex flex-wrap items-end justify-between gap-3'>
+          <div>
+            <h1 className='text-2xl font-bold tracking-tight'>
+              Automation Dashboard
+            </h1>
+            <p className='text-muted-foreground'>
+              聚合展示自动化任务健康度、近 7 天趋势，以及当前运行中的 execution
+              实时进度。
+            </p>
+          </div>
+          <div className='flex flex-wrap items-center gap-2'>
+            <Button variant='outline' onClick={() => overviewQuery.refetch()}>
+              <RefreshCw className='size-4' />
+              Refresh
+            </Button>
+            <Button asChild>
+              <Link
+                to='/automation/executions'
+                search={() => executionListSearch}
+              >
+                Open Execution List
+              </Link>
+            </Button>
           </div>
         </div>
-        <Tabs
-          orientation='vertical'
-          defaultValue='overview'
-          className='space-y-4'
-        >
-          <div className='w-full overflow-x-auto pb-2'>
-            <TabsList>
-              <TabsTrigger value='overview'>Overview</TabsTrigger>
-              <TabsTrigger value='analytics'>Analytics</TabsTrigger>
-              <TabsTrigger value='reports' disabled>
-                Reports
-              </TabsTrigger>
-              <TabsTrigger value='notifications' disabled>
-                Notifications
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value='overview' className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Total Revenue
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>$45,231.89</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +20.1% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Subscriptions
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
-                    <circle cx='9' cy='7' r='4' />
-                    <path d='M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+2350</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +180.1% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>Sales</CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <rect width='20' height='14' x='2' y='5' rx='2' />
-                    <path d='M2 10h20' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+12,234</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +19% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Active Now
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M22 12h-4l-3 9L9 3l-3 9H2' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+573</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +201 since last hour
-                  </p>
-                </CardContent>
-              </Card>
+
+        <Card>
+          <CardHeader className='gap-2'>
+            <CardTitle>Dashboard Filters</CardTitle>
+            <CardDescription>
+              通过时间窗口和任务名称快速收窄趋势图与运行卡片，并保留默认快照视图作为快速入口。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className='flex flex-col gap-3 lg:flex-row lg:items-end'>
+            <label className='space-y-2'>
+              <span className='text-sm font-medium'>Trend Window</span>
+              <Select
+                value={String(selectedDays)}
+                onValueChange={(value) => {
+                  void navigate({
+                    search: (prev) => ({
+                      ...prev,
+                      days: Number(value),
+                    }),
+                  })
+                }}
+              >
+                <SelectTrigger className='w-full lg:w-40'>
+                  <SelectValue placeholder='Select days' />
+                </SelectTrigger>
+                <SelectContent>
+                  {DAY_OPTIONS.map((days) => (
+                    <SelectItem key={days} value={String(days)}>
+                      Last {days} days
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+
+            <label className='space-y-2 lg:min-w-80'>
+              <span className='text-sm font-medium'>Job Name</span>
+              <Input
+                value={jobNameInput}
+                onChange={(event) => setJobNameInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    void applyFilters()
+                  }
+                }}
+                placeholder='Search by Jenkins job name'
+              />
+            </label>
+
+            <div className='flex flex-wrap gap-2'>
+              <Button onClick={() => void applyFilters()}>Apply Filters</Button>
+              <Button
+                variant='outline'
+                onClick={() => void resetFilters()}
+                disabled={!hasFilters}
+              >
+                <FilterX className='size-4' />
+                Reset
+              </Button>
+              <Button variant='ghost' asChild>
+                <Link
+                  to='/automation/executions'
+                  search={() => executionListSearch}
+                >
+                  Drill Into Execution List
+                </Link>
+              </Button>
             </div>
-            <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
-              <Card className='col-span-1 lg:col-span-4'>
+          </CardContent>
+        </Card>
+
+        {overviewQuery.isLoading ? (
+          <Card>
+            <CardContent className='py-16 text-center text-sm text-muted-foreground'>
+              Loading automation dashboard...
+            </CardContent>
+          </Card>
+        ) : data ? (
+          <>
+            <AutomationSummaryCards summary={data.summary} />
+
+            <div className='grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]'>
+              <Card>
                 <CardHeader>
-                  <CardTitle>Overview</CardTitle>
-                </CardHeader>
-                <CardContent className='ps-2'>
-                  <Overview />
-                </CardContent>
-              </Card>
-              <Card className='col-span-1 lg:col-span-3'>
-                <CardHeader>
-                  <CardTitle>Recent Sales</CardTitle>
+                  <CardTitle>Execution Trend</CardTitle>
                   <CardDescription>
-                    You made 265 sales this month.
+                    最近 {selectedDays} 天 execution 数量与 pass/fail 用例趋势。
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <RecentSales />
+                <CardContent className='pl-2'>
+                  <AutomationOverviewChart trends={data.trends} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Trend Notes</CardTitle>
+                  <CardDescription>
+                    用于快速判断自动化健康度和运行负载的关键读数。
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className='space-y-4 text-sm'>
+                  <InsightLine
+                    label={`Passed Cases · ${selectedDays}d`}
+                    value={String(data.summary.success_cases_7d)}
+                  />
+                  <InsightLine
+                    label={`Failed Cases · ${selectedDays}d`}
+                    value={String(data.summary.failure_cases_7d)}
+                  />
+                  <InsightLine
+                    label={`Skipped Cases · ${selectedDays}d`}
+                    value={String(data.summary.skipped_cases_7d)}
+                  />
+                  <InsightLine
+                    label={`Avg Duration · ${selectedDays}d`}
+                    value={
+                      data.summary.avg_execution_duration_7d == null
+                        ? '--'
+                        : `${data.summary.avg_execution_duration_7d.toFixed(2)} s`
+                    }
+                  />
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-          <TabsContent value='analytics' className='space-y-4'>
-            <Analytics />
-          </TabsContent>
-        </Tabs>
+
+            <div className='space-y-4'>
+              <div>
+                <h2 className='text-xl font-semibold tracking-tight'>
+                  Running Executions
+                </h2>
+                <p className='text-sm text-muted-foreground'>
+                  展示当前正在运行的 execution 进度、pass/fail 情况和正在执行的
+                  case。
+                </p>
+              </div>
+              <RunningExecutions
+                items={data.running_executions}
+                onOpen={(execution) => {
+                  setSelectedExecution(execution)
+                  setDialogOpen(true)
+                }}
+              />
+            </div>
+          </>
+        ) : (
+          <Card>
+            <CardContent className='py-16 text-center text-sm text-muted-foreground'>
+              Failed to load dashboard data.
+            </CardContent>
+          </Card>
+        )}
       </Main>
+
+      <RunningExecutionDialog
+        execution={selectedExecution}
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) {
+            setSelectedExecution(null)
+          }
+        }}
+      />
     </>
   )
 }
 
-const topNav = [
-  {
-    title: 'Overview',
-    href: 'dashboard/overview',
-    isActive: true,
-    disabled: false,
-  },
-  {
-    title: 'Customers',
-    href: 'dashboard/customers',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Products',
-    href: 'dashboard/products',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Settings',
-    href: 'dashboard/settings',
-    isActive: false,
-    disabled: true,
-  },
-]
+function InsightLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className='flex items-center justify-between rounded-lg border px-4 py-3'>
+      <span className='text-muted-foreground'>{label}</span>
+      <span className='font-semibold'>{value}</span>
+    </div>
+  )
+}

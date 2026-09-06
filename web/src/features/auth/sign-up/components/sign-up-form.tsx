@@ -7,6 +7,7 @@ import { Loader2, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { IconFacebook, IconGithub } from '@/assets/brand-icons'
 import { useAuthStore } from '@/stores/auth-store'
+import { resolvePostLoginHref } from '@/lib/post-login-redirect'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -48,7 +49,6 @@ export function SignUpForm({
 }: React.HTMLAttributes<HTMLFormElement>) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
-  const { auth } = useAuthStore()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -70,15 +70,16 @@ export function SignUpForm({
         password: data.password,
       })
 
-      if (registerResponse.success && registerResponse.data) {
-        auth.setAccessToken(registerResponse.data.access_token)
+      if (registerResponse.success && registerResponse.data?.access_token) {
+        const { setAccessToken, setUser } = useAuthStore.getState().auth
+        setAccessToken(registerResponse.data.access_token)
         if (registerResponse.data.user) {
-          auth.setUser(registerResponse.data.user)
+          setUser(registerResponse.data.user)
         }
       }
 
       toast.success(`Account created and logged in as ${data.username}.`)
-      navigate({ to: '/', replace: true })
+      await navigate({ href: resolvePostLoginHref('/'), replace: true })
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Error creating account.'

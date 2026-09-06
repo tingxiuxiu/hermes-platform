@@ -255,9 +255,15 @@ var emailPattern = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
 
 func (u *User) setEmail(email string) error {
 	email = strings.TrimSpace(email)
-	if email == "" || !emailPattern.MatchString(email) {
+	if !ValidEmail(email) {
 		return ErrInvalidEmail
 	}
 	u.email = email
 	return nil
+}
+
+// ValidEmail 与 setEmail 使用同一套宽松规则（对齐 Python EmailStr 的下限）。
+func ValidEmail(email string) bool {
+	email = strings.TrimSpace(email)
+	return email != "" && emailPattern.MatchString(email)
 }

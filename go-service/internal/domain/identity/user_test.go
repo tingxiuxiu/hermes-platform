@@ -103,6 +103,9 @@ func TestUsernameAndEmailValidation(t *testing.T) {
 	if err := u.ChangeEmail("alice@localhost"); err == nil {
 		t.Error("email without a dot in the domain must be rejected")
 	}
+	if err := u.ChangeEmail("alice@example.com@hermes.local"); err == nil {
+		t.Error("email with two @ must be rejected")
+	}
 	if err := u.ChangeEmail("alice@example.com"); err != nil {
 		t.Errorf("valid email must be accepted: %v", err)
 	}

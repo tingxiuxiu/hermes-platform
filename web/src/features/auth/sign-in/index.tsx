@@ -1,4 +1,7 @@
-import { Link, useSearch } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { useAuthStore } from '@/stores/auth-store'
+import { resolvePostLoginHref } from '@/lib/post-login-redirect'
 import {
   Card,
   CardContent,
@@ -12,6 +15,14 @@ import { UserAuthForm } from './components/user-auth-form'
 
 export function SignIn() {
   const { redirect } = useSearch({ from: '/(auth)/sign-in' })
+  const navigate = useNavigate()
+  const accessToken = useAuthStore((s) => s.auth.accessToken)
+  const user = useAuthStore((s) => s.auth.user)
+
+  useEffect(() => {
+    if (!accessToken || !user) return
+    void navigate({ href: resolvePostLoginHref(redirect), replace: true })
+  }, [accessToken, user, redirect, navigate])
 
   return (
     <AuthLayout>

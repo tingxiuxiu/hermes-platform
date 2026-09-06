@@ -18,7 +18,8 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
-import { loginApi } from '@/features/auth/api/auth-api'
+import { resolvePostLoginHref } from '@/lib/post-login-redirect'
+import { loginApi, type UserItem } from '@/features/auth/api/auth-api'
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 
@@ -31,6 +32,18 @@ const formSchema = z.object({
 })
 
 type FormValues = z.infer<typeof formSchema>
+
+function fallbackUser(username: string): UserItem {
+  return {
+    id: 0,
+    username,
+    email: null,
+    status: 0,
+    roles: [],
+    last_login_at: null,
+    created_at: null,
+  }
+}
 
 // ─── Component Props ──────────────────────────────────────────────────────────
 
@@ -47,7 +60,6 @@ export function UserAuthForm({
 }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
-  const { auth } = useAuthStore()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -70,18 +82,23 @@ export function UserAuthForm({
         return
       }
 
-      const { access_token, user } = response.data
-
-      // Persist token and user in store (and cookies)
-      auth.setAccessToken(access_token)
-      if (user) {
-        auth.setUser(user)
+      const { access_token, user } = response.data ?? {}
+      if (!access_token) {
+        toast.error(response.message || '登录失败，请重试。')
+        return
       }
+
+      // Persist via getState so this submit is not tied to a stale hook snapshot.
+      const { setAccessToken, setUser } = useAuthStore.getState().auth
+      setAccessToken(access_token)
+      setUser(user ?? fallbackUser(values.username))
 
       toast.success(`欢迎回来，${user?.username ?? values.username}！`)
 
-      const targetPath = redirectTo || '/'
-      navigate({ to: targetPath, replace: true })
+      await navigate({
+        href: resolvePostLoginHref(redirectTo),
+        replace: true,
+      })
     } catch (err: unknown) {
       // The axios interceptor already maps `detail` → error.message
       const message =
@@ -147,7 +164,12 @@ export function UserAuthForm({
         />
 
         {/* Submit */}
-        <Button id='sign-in-submit' className='mt-2' disabled={isLoading}>
+        <Button
+          id='sign-in-submit'
+          type='submit'
+          className='mt-2'
+          disabled={isLoading}
+        >
           {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}登 录
         </Button>
       </form>

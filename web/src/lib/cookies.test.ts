@@ -21,6 +21,18 @@ describe('cookies', () => {
     expect(getCookie(name)).toBe(value)
   })
 
+  it('round-trips JSON that contains commas, quotes, and non-ascii text', () => {
+    const name = uniqueName()
+    const value = JSON.stringify({
+      username: 'admin',
+      role: '管理员',
+    })
+
+    setCookie(name, value)
+
+    expect(getCookie(name)).toBe(value)
+  })
+
   it('clears a value so it is no longer readable', () => {
     const name = uniqueName()
 

@@ -16,12 +16,20 @@ interface AuthState {
   }
 }
 
-export const useAuthStore = create<AuthState>()((set) => {
-  const savedToken = getCookie(ACCESS_TOKEN_KEY)
-  const initToken = savedToken ? JSON.parse(savedToken) : ''
+function readJsonCookie<T>(key: string, fallback: T): T {
+  const raw = getCookie(key)
+  if (!raw) return fallback
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    removeCookie(key)
+    return fallback
+  }
+}
 
-  const savedUser = getCookie(USER_INFO_KEY)
-  const initUser: UserItem | null = savedUser ? JSON.parse(savedUser) : null
+export const useAuthStore = create<AuthState>()((set) => {
+  const initToken = readJsonCookie(ACCESS_TOKEN_KEY, '')
+  const initUser = readJsonCookie<UserItem | null>(USER_INFO_KEY, null)
 
   return {
     auth: {

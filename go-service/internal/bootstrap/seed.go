@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	persistence "github.com/hermes-platform/go-service/internal/adapter/persistence/identity"
 	appidentity "github.com/hermes-platform/go-service/internal/application/identity"
@@ -74,14 +75,14 @@ func SeedAll(ctx context.Context, app *App, cfg config.Config) error {
 
 // seedFirstSuperuser 幂等创建超级管理员并绑定 admin 角色。
 //
-// 依赖 FIRSt_SUPERUSER / FIRST_SUPERUSER_PASSWORD 配置。若未配置则跳过
-// （管理员可后续手动创建，或通过 Python 侧已有的 seed 逻辑）。
+// FIRST_SUPERUSER 与 Python 一致，可以是邮箱（EmailStr，如 admin@example.com）
+// 或纯用户名。若是邮箱：email 用原值，username 用 @ 前的本地部分。
 //
 // 幂等语义：用户已存在（含软删除）时不做任何操作，直接返回。
 func seedFirstSuperuser(ctx context.Context, app *App, cfg config.Config) error {
-	username := strings.TrimSpace(cfg.Bootstrap.FirstSuperuser)
+	raw := strings.TrimSpace(cfg.Bootstrap.FirstSuperuser)
 	password := cfg.Bootstrap.FirstSuperuserPassword
-	if username == "" {
+	if raw == "" {
 		app.Log.Info("seed: FIRST_SUPERUSER not set, skipping superuser creation")
 		return nil
 	}
@@ -90,14 +91,23 @@ func seedFirstSuperuser(ctx context.Context, app *App, cfg config.Config) error 
 		return nil
 	}
 
+	username, email := superuserIdentity(raw)
 	users := app.Services.Users
 
-	// 幂等：已存在则跳过
-	if _, err := users.GetByUsername(ctx, username); err == nil {
-		app.Log.Info("seed: superuser already exists, skipping", "username", username)
+	// 幂等：按用户名或邮箱命中即跳过（登录同样支持两者）
+	if _, err := users.GetByUsername(ctx, raw); err == nil {
+		app.Log.Info("seed: superuser already exists, skipping", "username", username, "email", email)
 		return nil
 	} else if !errors.Is(err, errors.KindNotFound) {
 		return fmt.Errorf("seed: check superuser existence: %w", err)
+	}
+	if raw != username {
+		if _, err := users.GetByUsername(ctx, username); err == nil {
+			app.Log.Info("seed: superuser already exists, skipping", "username", username)
+			return nil
+		} else if !errors.Is(err, errors.KindNotFound) {
+			return fmt.Errorf("seed: check superuser existence: %w", err)
+		}
 	}
 
 	// 找 admin 角色 ID
@@ -116,20 +126,29 @@ func seedFirstSuperuser(ctx context.Context, app *App, cfg config.Config) error 
 		return fmt.Errorf("seed: admin role not found (roles may not be seeded)")
 	}
 
-	// superuser 需要一个合法邮箱（域内邮箱宽松校验会拒绝空串）。
-	// 用 <username>@hermes.local 作为默认，避免 FIRST_SUPERUSER 未配邮箱时失败。
-	defaultEmail := username + "@hermes.local"
-
 	user, err := users.Create(ctx, appidentity.CreateUserCommand{
 		Username: username,
 		Password: password,
-		Email:    defaultEmail,
+		Email:    email,
 		RoleIDs:  []int64{adminRoleID},
 	})
 	if err != nil {
 		return fmt.Errorf("seed: create superuser: %w", err)
 	}
 	app.Log.Info("seed: superuser created",
-		"username", username, "user_id", user.ID())
+		"username", username, "email", email, "user_id", user.ID())
 	return nil
+}
+
+// superuserIdentity 把 FIRST_SUPERUSER 拆成 username + email。
+// Python 配置是 EmailStr，不能再拼接 @hermes.local。
+func superuserIdentity(raw string) (username, email string) {
+	if identity.ValidEmail(raw) {
+		local, _, _ := strings.Cut(raw, "@")
+		if n := utf8.RuneCountInString(local); n >= 3 && n <= 64 {
+			return local, raw
+		}
+		return "admin", raw
+	}
+	return raw, raw + "@hermes.local"
 }

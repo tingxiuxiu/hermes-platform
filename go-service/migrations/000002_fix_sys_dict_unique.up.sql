@@ -24,6 +24,9 @@ END $$;
 -- 存量库若缺失（例如手工建表）则补上，保证语义一致。
 DO $$
 BEGIN
+    IF to_regclass('public.sys_dict') IS NULL THEN
+        RETURN;
+    END IF;
     IF NOT EXISTS (
         SELECT 1
         FROM pg_constraint c

@@ -29,7 +29,7 @@ api.interceptors.response.use(
   (error) => {
     if (axios.isAxiosError(error)) {
       // Backend returns { detail: "..." } for HTTP errors
-      const detail = error.response?.data?.detail
+      const detail = error.response?.data?.detail ?? error.response?.data?.message
       if (typeof detail === 'string') {
         error.message = detail
       }

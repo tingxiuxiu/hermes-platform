@@ -58,8 +58,8 @@ export SECRET_KEY=change-this-secret-key
 ### 2. 数据库迁移
 
 ```bash
-make migrate-up            # 新库：应用全部迁移
-make migrate-baseline      # 存量库（已由 alembic 建表）：打基线后补迁移
+make migrate-up            # 空库建表；若误跑过 baseline，会清掉脏版本后重跑
+make migrate-baseline      # 仅当 roles/sys_dict/test_executions 已存在（Alembic 存量库）
 make migrate-verify        # 临时库验证 up→down→up 可逆
 ```
 

@@ -2,6 +2,7 @@
 //
 // 职责：
 //   - 加载配置、装配应用（bootstrap.New）
+//   - 启动前应用 golang-migrate schema（空库建表；已是最新则跳过）
 //   - 首启时幂等创建超级管理员（FIRST_SUPERUSER / FIRST_SUPERUSER_PASSWORD）
 //   - 监听 HTTP_PORT，优雅停机
 //
@@ -22,6 +23,8 @@ import (
 
 	"github.com/hermes-platform/go-service/internal/bootstrap"
 	"github.com/hermes-platform/go-service/internal/platform/config"
+	"github.com/hermes-platform/go-service/internal/platform/migrations"
+	migsql "github.com/hermes-platform/go-service/migrations"
 )
 
 func main() {
@@ -45,6 +48,10 @@ func run() error {
 		return fmt.Errorf("bootstrap app: %w", err)
 	}
 	defer app.Close()
+
+	if err := applySchema(cfg.Postgres.DSN()); err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
 
 	// 首启种子：角色/权限/超级管理员（幂等，可安全重复执行）
 	if err := bootstrap.SeedAll(ctx, app, cfg); err != nil {
@@ -81,4 +88,16 @@ func run() error {
 		}
 		return fmt.Errorf("http server: %w", err)
 	}
+}
+
+func applySchema(dsn string) error {
+	if err := migrations.ResetBookkeepingIfEmpty(dsn); err != nil {
+		return err
+	}
+	m, err := migrations.NewFS(migsql.FS, dsn)
+	if err != nil {
+		return err
+	}
+	defer func() { _, _ = m.Close() }()
+	return migrations.Up(m)
 }

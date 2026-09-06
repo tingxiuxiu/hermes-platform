@@ -4,6 +4,7 @@ package migrations
 
 import (
 	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
 
@@ -45,6 +46,23 @@ func New(dir, dsn string) (*migrate.Migrate, error) {
 		return nil, fmt.Errorf("open migrations source %q: %w", dir, err)
 	}
 
+	m, err := migrate.NewWithSourceInstance("iofs", source, dbURL)
+	if err != nil {
+		return nil, fmt.Errorf("create migrate: %w", err)
+	}
+	return m, nil
+}
+
+// NewFS 从任意 fs.FS 构造 migrate 实例（通常是 embed.FS）。
+func NewFS(files fs.FS, dsn string) (*migrate.Migrate, error) {
+	dbURL, err := DatabaseURL(dsn)
+	if err != nil {
+		return nil, err
+	}
+	source, err := iofs.New(files, ".")
+	if err != nil {
+		return nil, fmt.Errorf("open embedded migrations: %w", err)
+	}
 	m, err := migrate.NewWithSourceInstance("iofs", source, dbURL)
 	if err != nil {
 		return nil, fmt.Errorf("create migrate: %w", err)

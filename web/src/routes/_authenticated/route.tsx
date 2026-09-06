@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth-store'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+import { resolvePostLoginHref } from '@/lib/post-login-redirect'
 
 function AuthenticatedRoute() {
   const navigate = useNavigate()
@@ -16,7 +17,7 @@ function AuthenticatedRoute() {
     if (!auth.accessToken || !auth.user) {
       navigate({
         to: '/sign-in',
-        search: { redirect: location.href },
+        search: { redirect: resolvePostLoginHref(location.href) },
         replace: true,
       })
     }

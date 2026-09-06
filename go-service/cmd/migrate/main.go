@@ -18,6 +18,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/jackc/pgx/v5"
@@ -46,6 +47,12 @@ func run(cmd string, steps, version int, path, dsn string) error {
 			return fmt.Errorf("load config: %w", err)
 		}
 		dsn = cfg.Postgres.DSN()
+	}
+
+	if cmd == "up" {
+		if err := migrations.ResetBookkeepingIfEmpty(dsn); err != nil {
+			return err
+		}
 	}
 
 	m, err := newMigrate(dsn, path)
@@ -80,6 +87,15 @@ func run(cmd string, steps, version int, path, dsn string) error {
 		fmt.Printf("migrate: forced version to %d\n", version)
 
 	case "baseline":
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		present, err := migrations.HasInitSchema(ctx, dsn)
+		if err != nil {
+			return err
+		}
+		if !present {
+			return fmt.Errorf("baseline is only for DBs that already have 000001 tables (roles, sys_dict, test_executions).\nThis database looks empty. From go-service run:\n  go run ./cmd/migrate -cmd up")
+		}
 		// 存量库打基线：把 000001 标记为已执行，然后继续应用后续修复迁移。
 		if err := m.Force(1); err != nil {
 			return fmt.Errorf("force baseline: %w", err)

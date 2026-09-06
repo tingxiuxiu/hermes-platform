@@ -138,7 +138,7 @@ S1–S6 可在无真实 pytest 的情况下用 Go 集成测试打通「上报步
 - Vite proxy `/tap/api`
 - `contract-diff` allowlist 新路由
 - 插件 README 按 03-plugin 重写（旧 README 作废）
-- `docs/go-service/README.md` 链到 `docs/live-execution/`
+- `docs/service/README.md` 链到 `docs/live-execution/`
 
 ---
 

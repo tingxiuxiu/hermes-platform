@@ -20,6 +20,7 @@ exporters:
     endpoint: ${env:OPENOBSERVE_URL}
     headers:
       Authorization: Basic ${env:OPENOBSERVE_AUTH}
+      stream-name: ${env:OPENOBSERVE_STREAM}
 
 service:
   pipelines:

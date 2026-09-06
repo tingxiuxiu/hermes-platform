@@ -1,6 +1,6 @@
 # Go Service
 
-Go 服务端设计文档（六边形分层、契约、迁移与测试）。实现代码见仓库 [`go-service/`](../../go-service/README.md)。
+Go 服务端设计文档（六边形分层、契约、迁移与测试）。实现代码见仓库 [`service/`](../../service/README.md)。
 
 | 文档 | 内容 |
 | --- | --- |

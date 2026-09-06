@@ -8,7 +8,7 @@ GOBIN    := $(shell pwd)/bin
 MIGRATE  := $(GO) run ./cmd/migrate
 
 help: ## 显示帮助
-	@echo "Hermes Platform · go-service"
+	@echo "Hermes Platform · service"
 	@echo ""
 	@echo "  构建与运行"
 	@echo "    make build            编译 4 个二进制到 bin/"

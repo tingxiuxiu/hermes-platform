@@ -193,12 +193,12 @@ func Load() (Config, error) {
 	cfg.APIPrefix = v.GetString("API_V1_STR")
 
 	// ---- HTTP ----
-	v.SetDefault("HTTP_PORT", 8080)
+	v.SetDefault("SERVICE_PORT", 80)
 	v.SetDefault("HTTP_READ_TIMEOUT", "15s")
 	v.SetDefault("HTTP_WRITE_TIMEOUT", "15s")
 	v.SetDefault("HTTP_IDLE_TIMEOUT", "60s")
 	v.SetDefault("HTTP_SHUTDOWN_WAIT", "20s")
-	cfg.HTTP.Port = v.GetInt("HTTP_PORT")
+	cfg.HTTP.Port = v.GetInt("SERVICE_PORT")
 	cfg.HTTP.ReadTimeout = v.GetDuration("HTTP_READ_TIMEOUT")
 	cfg.HTTP.WriteTimeout = v.GetDuration("HTTP_WRITE_TIMEOUT")
 	cfg.HTTP.IdleTimeout = v.GetDuration("HTTP_IDLE_TIMEOUT")

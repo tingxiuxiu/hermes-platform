@@ -4,7 +4,7 @@
 //   - 加载配置、装配应用（bootstrap.New）
 //   - 启动前应用 golang-migrate schema（空库建表；已是最新则跳过）
 //   - 首启时幂等创建超级管理员（FIRST_SUPERUSER / FIRST_SUPERUSER_PASSWORD）
-//   - 监听 HTTP_PORT，优雅停机
+//   - 监听 SERVICE_PORT（默认 80），优雅停机
 //
 // 优雅停机流程：收到 SIGINT/SIGTERM → 停止接收新请求（http.Server.Shutdown）→
 // 等待在途请求完成（超时上限）→ 关闭数据库/Redis 连接池。

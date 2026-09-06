@@ -14,7 +14,7 @@
 ## 2. 目标数据面
 
 ```
-CI pytest ──Allure lifecycle──► hermes_plugin ──HTTP+ServiceToken──► go-service api
+CI pytest ──Allure lifecycle──► hermes_plugin ──HTTP+ServiceToken──► service api
                                                                       │
                                                                       ├─ PG 写侧 (source of truth)
                                                                       ├─ Redis PUBLISH hermes:live:{build_uid}

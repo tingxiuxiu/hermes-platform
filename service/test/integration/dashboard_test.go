@@ -147,6 +147,12 @@ func TestDashboardOverviewAfterExecutionFinished(t *testing.T) {
 			FailureCases7d       int     `json:"failure_cases_7d"`
 			PassRate7d           float64 `json:"pass_rate_7d"`
 		} `json:"summary"`
+		Trends []struct {
+			StatDate       string `json:"stat_date"`
+			ExecutionTotal int    `json:"execution_total"`
+			SuccessCases   int    `json:"success_cases"`
+			FailureCases   int    `json:"failure_cases"`
+		} `json:"trends"`
 	}
 	if err := json.Unmarshal(decodeAutomation(t, w).Data, &data); err != nil {
 		t.Fatalf("decode overview: %v", err)
@@ -162,5 +168,12 @@ func TestDashboardOverviewAfterExecutionFinished(t *testing.T) {
 	}
 	if data.Summary.PassRate7d != 0.5 {
 		t.Errorf("pass_rate = %v, want 0.5", data.Summary.PassRate7d)
+	}
+	if len(data.Trends) == 0 {
+		t.Fatal("trends empty, want daily buckets for the last 7 days")
+	}
+	last := data.Trends[len(data.Trends)-1]
+	if last.ExecutionTotal != 1 || last.SuccessCases != 1 || last.FailureCases != 1 {
+		t.Errorf("today trend = %+v, want exec=1 success=1 failure=1", last)
 	}
 }

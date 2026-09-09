@@ -16,6 +16,22 @@ export function formatDuration(value: number | null | undefined) {
   return `${value.toFixed(1)} s`
 }
 
+/** API pass_rate is a 0–1 ratio; display as a percentage. */
+export function formatPassRate(rate: number | null | undefined) {
+  if (rate == null || Number.isNaN(rate)) return '--'
+  return `${(rate * 100).toFixed(2)}%`
+}
+
+export function formatTrendDay(statDate: string | null | undefined) {
+  if (!statDate) return '--'
+  const date = new Date(statDate)
+  if (Number.isNaN(date.getTime())) return statDate
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export function stringifyParams(value: Record<string, unknown> | null | undefined) {
   if (!value) return '--'
   const text = JSON.stringify(value)

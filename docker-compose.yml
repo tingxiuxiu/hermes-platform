@@ -18,6 +18,9 @@ x-go-environment: &go-environment
   SECRET_KEY: ${SECRET_KEY:-yqVeBt_e1CJeSWYel2DGOVJRxNZiTadofeIjmHE4jjw}
   SERVICE_PORT: ${SERVICE_PORT:-80}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-otel-collector:4318}
+  AUTOMATION_SERVICE_TOKEN: ${AUTOMATION_SERVICE_TOKEN:-changethis}
+  FIRST_SUPERUSER: ${FIRST_SUPERUSER:-}
+  FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:-}
 
 services:
   frontend:
@@ -26,6 +29,8 @@ services:
       dockerfile: ../docker/Dockerfile.frontend
       args:
         VITE_API_BASE_URL: /
+    ports:
+      - "8080:80"
     depends_on:
       api:
         condition: service_healthy

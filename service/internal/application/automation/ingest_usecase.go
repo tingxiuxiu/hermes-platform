@@ -187,10 +187,13 @@ func (uc *IngestUseCase) FinishExecution(ctx context.Context, cmd FinishExecutio
 			return nil, err
 		}
 
-		events = append(events, automation.ExecutionUpdated{
+		ev := automation.ExecutionUpdated{
 			ExecutionID: exec.ID(),
 			BuildUID:    exec.BuildUID(),
-		})
+			Status:      string(exec.Status()),
+		}
+		events = append(events, ev)
+		uc.publishLive(ctx, ev)
 	}
 	return events, nil
 }
@@ -286,12 +289,9 @@ func (uc *IngestUseCase) IngestItem(ctx context.Context, cmd IngestItemCommand) 
 		executionID = exec.ID()
 	}
 
-	events = append(events, automation.ItemUpdated{
-		ExecutionID: executionID,
-		BuildUID:    cmd.BuildUID,
-		ItemID:      item.ID(),
-		CaseUID:     cmd.CaseUID,
-	})
+	ev := itemUpdatedEvent(item, executionID)
+	events = append(events, ev)
+	uc.publishLive(ctx, ev)
 	return events, nil
 }
 
@@ -347,10 +347,13 @@ func (uc *IngestUseCase) AbortStale(ctx context.Context, olderThan time.Duration
 			return aborted, events, err
 		}
 		aborted++
-		events = append(events, automation.ExecutionUpdated{
+		ev := automation.ExecutionUpdated{
 			ExecutionID: exec.ID(),
 			BuildUID:    exec.BuildUID(),
-		})
+			Status:      string(exec.Status()),
+		}
+		events = append(events, ev)
+		uc.publishLive(ctx, ev)
 	}
 	return aborted, events, nil
 }
@@ -389,12 +392,35 @@ func (uc *IngestUseCase) IngestStep(ctx context.Context, cmd IngestStepCommand) 
 	liveEvent := automation.StepUpserted{
 		BuildUID: item.BuildUID(),
 		CaseUID:  cmd.CaseUID,
+		CaseKey:  item.CaseKey(),
+		CaseName: item.CaseName(),
 		StepPath: cmd.StepPath.String(),
 		StepName: cmd.StepName,
 		Status:   string(cmd.Status),
 	}
-	_ = uc.live.Publish(ctx, liveEvent)
+	uc.publishLive(ctx, liveEvent)
 	return []automation.Event{liveEvent}, nil
+}
+
+func (uc *IngestUseCase) publishLive(ctx context.Context, event automation.Event) {
+	_ = uc.live.Publish(ctx, event)
+}
+
+func itemUpdatedEvent(item *automation.ExecutionItem, executionID int64) automation.ItemUpdated {
+	return automation.ItemUpdated{
+		ExecutionID:   executionID,
+		BuildUID:      item.BuildUID(),
+		ItemID:        item.ID(),
+		CaseUID:       item.CaseUID(),
+		CaseKey:       item.CaseKey(),
+		CaseName:      item.CaseName(),
+		AttemptNumber: item.AttemptNumber(),
+		Status:        string(item.Status()),
+		StartTime:     item.StartTime(),
+		EndTime:       item.EndTime(),
+		Duration:      item.Duration(),
+		ErrorMessage:  item.ErrorMessage(),
+	}
 }
 
 // ---------------------------------------------------------------------------

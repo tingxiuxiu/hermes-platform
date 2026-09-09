@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -33,8 +34,30 @@ type stepDelta struct {
 	Type     string `json:"type"`
 	BuildUID string `json:"build_uid"`
 	CaseUID  string `json:"case_uid"`
+	CaseKey  string `json:"case_key"`
+	CaseName string `json:"case_name"`
 	StepPath string `json:"step_path"`
 	StepName string `json:"step_name"`
+	Status   string `json:"status"`
+}
+
+type itemUpdatedDelta struct {
+	Type          string     `json:"type"`
+	BuildUID      string     `json:"build_uid"`
+	CaseUID       string     `json:"case_uid"`
+	CaseKey       string     `json:"case_key"`
+	CaseName      string     `json:"case_name"`
+	AttemptNumber int        `json:"attempt_number"`
+	Status        string     `json:"status"`
+	StartTime     *time.Time `json:"start_time"`
+	EndTime       *time.Time `json:"end_time"`
+	Duration      *float64   `json:"duration"`
+	ErrorMessage  string     `json:"error_message,omitempty"`
+}
+
+type executionUpdatedDelta struct {
+	Type     string `json:"type"`
+	BuildUID string `json:"build_uid"`
 	Status   string `json:"status"`
 }
 
@@ -43,22 +66,54 @@ func (h *Hub) Publish(ctx context.Context, event automation.Event) error {
 	if h == nil || h.rdb == nil {
 		return nil
 	}
+	var (
+		buildUID uuid.UUID
+		payload  []byte
+		err      error
+	)
 	switch e := event.(type) {
 	case automation.StepUpserted:
-		payload, err := json.Marshal(stepDelta{
+		buildUID = e.BuildUID
+		payload, err = json.Marshal(stepDelta{
 			Type:     "step.upserted",
 			BuildUID: e.BuildUID.String(),
 			CaseUID:  e.CaseUID.String(),
+			CaseKey:  e.CaseKey,
+			CaseName: e.CaseName,
 			StepPath: e.StepPath,
 			StepName: e.StepName,
 			Status:   e.Status,
 		})
-		if err != nil {
-			return fmt.Errorf("live: marshal step delta: %w", err)
-		}
-		if err := h.rdb.Publish(ctx, channel(e.BuildUID), payload).Err(); err != nil {
-			return fmt.Errorf("live: publish: %w", err)
-		}
+	case automation.ItemUpdated:
+		buildUID = e.BuildUID
+		payload, err = json.Marshal(itemUpdatedDelta{
+			Type:          "item.updated",
+			BuildUID:      e.BuildUID.String(),
+			CaseUID:       e.CaseUID.String(),
+			CaseKey:       e.CaseKey,
+			CaseName:      e.CaseName,
+			AttemptNumber: e.AttemptNumber,
+			Status:        e.Status,
+			StartTime:     e.StartTime,
+			EndTime:       e.EndTime,
+			Duration:      e.Duration,
+			ErrorMessage:  e.ErrorMessage,
+		})
+	case automation.ExecutionUpdated:
+		buildUID = e.BuildUID
+		payload, err = json.Marshal(executionUpdatedDelta{
+			Type:     "execution.updated",
+			BuildUID: e.BuildUID.String(),
+			Status:   e.Status,
+		})
+	default:
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("live: marshal event: %w", err)
+	}
+	if err := h.rdb.Publish(ctx, channel(buildUID), payload).Err(); err != nil {
+		return fmt.Errorf("live: publish: %w", err)
 	}
 	return nil
 }

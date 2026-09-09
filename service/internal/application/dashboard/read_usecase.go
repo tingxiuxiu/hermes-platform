@@ -79,7 +79,7 @@ func (uc *OverviewUseCase) GetOverview(ctx context.Context, ensureFresh bool) (*
 		}
 	}
 
-	since := uc.clock.Now().AddDate(0, 0, -6)
+	since := dashboard.DayKey(uc.clock.Now()).AddDate(0, 0, -6)
 	trends, err := uc.snapshots.GetTrends(ctx, since)
 	if err != nil {
 		return nil, err

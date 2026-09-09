@@ -2,9 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   applyLiveEvent,
+  followLiveCaseUid,
   fromGoSteps,
   isTerminalExecution,
-  pickDefaultCaseUid,
+  mergeSessionItems,
+  mergeSessionTrees,
+  shouldLoadPersistedTree,
   sortCasesForSession,
   treesFromSnapshot,
   type SessionTrees,
@@ -30,36 +33,33 @@ export function useExecutionSession(buildUid: string, urlCase?: string) {
     executionStatus: 'running',
   })
   const [selectedCaseUid, setSelectedCaseUid] = useState<string | null>(null)
+  const [followLive, setFollowLive] = useState(!urlCase)
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
     setState({ items: [], trees: {}, executionStatus: 'running' })
     setSelectedCaseUid(null)
+    setFollowLive(!urlCase)
     setHydrated(false)
-  }, [buildUid])
+  }, [buildUid, urlCase])
 
   useEffect(() => {
     const snapshot = liveQuery.data
     if (!snapshot) return
     setState((current) => ({
-      items: snapshot.items,
-      trees: {
-        ...current.trees,
-        ...treesFromSnapshot(snapshot),
-      },
+      items: mergeSessionItems(current.items, snapshot.items),
+      trees: mergeSessionTrees(current.trees, treesFromSnapshot(snapshot)),
       executionStatus: snapshot.execution.status,
     }))
-    setSelectedCaseUid((current) => {
-      if (urlCase && snapshot.items.some((item) => item.case_uid === urlCase)) {
-        return urlCase
-      }
-      if (current && snapshot.items.some((item) => item.case_uid === current)) {
-        return current
-      }
-      return pickDefaultCaseUid(snapshot, urlCase)
-    })
     setHydrated(true)
   }, [liveQuery.data, urlCase])
+
+  useEffect(() => {
+    if (!hydrated) return
+    setSelectedCaseUid((current) =>
+      followLiveCaseUid(state.items, current, followLive, urlCase)
+    )
+  }, [hydrated, state.items, followLive, urlCase])
 
   const selected = useMemo(
     () => state.items.find((item) => item.case_uid === selectedCaseUid) ?? null,
@@ -69,12 +69,17 @@ export function useExecutionSession(buildUid: string, urlCase?: string) {
   const itemQuery = useQuery({
     queryKey: ['automation', 'item', selectedCaseUid],
     queryFn: () => getItemDetail(selectedCaseUid!),
-    enabled: Boolean(selectedCaseUid) && !state.trees[selectedCaseUid!],
+    enabled:
+      Boolean(selectedCaseUid) &&
+      shouldLoadPersistedTree(
+        selected?.status,
+        Boolean(selectedCaseUid && state.trees[selectedCaseUid])
+      ),
   })
 
   useEffect(() => {
     const detail = itemQuery.data
-    if (!detail) return
+    if (!detail || detail.case_uid !== selectedCaseUid) return
     setState((current) => ({
       ...current,
       trees: {
@@ -82,7 +87,7 @@ export function useExecutionSession(buildUid: string, urlCase?: string) {
         [detail.case_uid]: fromGoSteps(detail.steps),
       },
     }))
-  }, [itemQuery.data])
+  }, [itemQuery.data, selectedCaseUid])
 
   const refetchLive = liveQuery.refetch
 
@@ -149,8 +154,14 @@ export function useExecutionSession(buildUid: string, urlCase?: string) {
     executionStatus: state.executionStatus,
     selectedCaseUid,
     selected,
-    selectCase: setSelectedCaseUid,
     refetch: liveQuery.refetch,
+    selectCase: (caseUid: string) => {
+      const latestRunning = sortCasesForSession(state.items).find(
+        (row) => row.status === 'running'
+      )
+      setFollowLive(caseUid === latestRunning?.case_uid)
+      setSelectedCaseUid(caseUid)
+    },
   }
 }
 

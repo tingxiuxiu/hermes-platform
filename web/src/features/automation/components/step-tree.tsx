@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import type { LiveStepNode } from '../data/schema'
+import { activeStepPath } from '../data/live-tree'
 import { formatDateTime, formatDuration, statusColor } from '../data/utils'
 
 type StepTreeProps = {
@@ -10,6 +11,20 @@ type StepTreeProps = {
 }
 
 export function StepTree({ nodes }: StepTreeProps) {
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const followRef = useRef(true)
+  const activePath = activeStepPath(nodes)
+
+  useEffect(() => {
+    if (!followRef.current || !activePath) return
+    const root = scrollerRef.current
+    if (!root) return
+    const target = root.querySelector(
+      `[data-step-path="${CSS.escape(activePath)}"]`
+    )
+    target?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [nodes, activePath])
+
   if (!nodes.length) {
     return (
       <div className='py-10 text-center text-sm text-muted-foreground'>
@@ -19,10 +34,25 @@ export function StepTree({ nodes }: StepTreeProps) {
   }
 
   return (
-    <div className='space-y-3'>
-      {nodes.map((node) => (
-        <StepTreeNodeView key={node.step_path} node={node} depth={0} />
-      ))}
+    <div
+      ref={scrollerRef}
+      className='min-h-0 flex-1 overflow-y-auto'
+      onScroll={(event) => {
+        const root = event.currentTarget
+        const gap = root.scrollHeight - root.scrollTop - root.clientHeight
+        followRef.current = gap < 96
+      }}
+    >
+      <div className='flex flex-col gap-3 p-4 pt-0'>
+        {nodes.map((node) => (
+          <StepTreeNodeView
+            key={node.step_path}
+            node={node}
+            depth={0}
+            activePath={activePath}
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -30,17 +60,22 @@ export function StepTree({ nodes }: StepTreeProps) {
 function StepTreeNodeView({
   node,
   depth,
+  activePath,
 }: {
   node: LiveStepNode
   depth: number
+  activePath: string | null
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const hasChildren = node.children.length > 0
   const running = node.status === 'running'
+  const active = node.step_path === activePath
 
   return (
     <div className={cn(depth > 0 && 'ml-4 border-l border-[#e0e0e0] pl-4')}>
       <div
+        data-step-path={node.step_path}
+        data-step-active={active ? 'true' : undefined}
         className={cn(
           'rounded-[18px] border bg-white p-4 dark:bg-background',
           running ? 'border-[#0066cc]' : 'border-[#e0e0e0]'
@@ -88,12 +123,13 @@ function StepTreeNodeView({
       </div>
 
       {hasChildren && !collapsed && (
-        <div className='mt-3 space-y-3'>
+        <div className='mt-3 flex flex-col gap-3'>
           {node.children.map((child) => (
             <StepTreeNodeView
               key={child.step_path}
               node={child}
               depth={depth + 1}
+              activePath={activePath}
             />
           ))}
         </div>

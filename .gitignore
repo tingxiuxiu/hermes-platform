@@ -38,3 +38,16 @@ server.exe
 .idea/
 service/bin/
 data/
+hermes_plugin/allure-results/
+hermes_plugin/.venv/
+hermes_plugin/.pdm-build/
+hermes_plugin/.pytest_cache/
+hermes_plugin/tests/__pycache__/
+hermes_plugin/tests/.pytest_cache/
+hermes_plugin/__pycache__/
+hermes_plugin/src/hermes_plugin/__pycache__/
+hermes_plugin/src/hermes_plugin/tests/__pycache__/
+
+web/node_modules/
+web/dist/
+web/.tanstack/

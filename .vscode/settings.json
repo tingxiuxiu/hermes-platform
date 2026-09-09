@@ -1,8 +1,8 @@
 {
-  "python.defaultInterpreterPath": ".\\service\\.venv\\Scripts\\python.exe",
+  "python.defaultInterpreterPath": ".\\hermes_plugin\\.venv\\Scripts\\python.exe",
   "python.testing.pytestEnabled": true,
   "python.testing.pytestArgs": [
-    "src/app/tests"
+    "hermes_plugin/tests"
   ],
   "[javascriptreact]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",

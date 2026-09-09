@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   formatDateTime,
   formatDuration,
+  formatPassRate,
   statusColor,
 } from '@/features/automation/data/utils'
 import type { DashboardSummary } from '../api/dashboard-api'
@@ -30,7 +31,7 @@ export function AutomationSummaryCards({
     },
     {
       title: 'Pass Rate · 7d',
-      value: `${summary.pass_rate_7d.toFixed(2)}%`,
+      value: formatPassRate(summary.pass_rate_7d),
       hint: `${summary.success_cases_7d} passed / ${summary.failure_cases_7d} failed`,
       icon: BadgeCheck,
       tone: cn(
@@ -56,7 +57,7 @@ export function AutomationSummaryCards({
             <CardTitle className='text-sm font-medium'>{card.title}</CardTitle>
             {card.badge ? (
               <span className={card.tone}>
-                {summary.pass_rate_7d.toFixed(2)}%
+                {formatPassRate(summary.pass_rate_7d)}
               </span>
             ) : (
               <card.icon className={cn('size-4', card.tone)} />

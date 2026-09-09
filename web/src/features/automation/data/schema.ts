@@ -101,6 +101,8 @@ export type StepDelta = {
   type: 'step.upserted'
   build_uid: string
   case_uid: string
+  case_key?: string
+  case_name?: string
   step_path: string
   step_name: string
   status: StepStatus
@@ -110,7 +112,11 @@ export type ItemUpdatedEvent = {
   type: 'item.updated'
   build_uid: string
   case_uid: string
+  case_key?: string
+  case_name?: string
+  attempt_number?: number
   status: CaseStatus
+  start_time?: string | null
   end_time?: string | null
   duration?: number | null
   error_message?: string

@@ -592,6 +592,51 @@ func TestIngestStepPublishesLiveEvent(t *testing.T) {
 	if ev.StepPath != "0.1" || ev.StepName != "输入账号" || ev.Status != "running" {
 		t.Errorf("step event = %+v", ev)
 	}
+	if ev.CaseName != "登录测试" || ev.CaseKey != "JIRA-LIVE" {
+		t.Errorf("step case identity = %+v, want 登录测试 / JIRA-LIVE", ev)
+	}
+}
+
+func TestIngestItemPublishesLiveEvent(t *testing.T) {
+	env := harness.Setup(t)
+	buildUID := uuid.New()
+	createExecution(t, env, buildUID.String())
+	caseUID := uuid.New()
+
+	live := &recordingLivePublisher{}
+	ingest := appautomation.NewIngestUseCase(
+		persist.NewExecutionRepo(env.DB),
+		persist.NewItemRepo(env.DB),
+		persist.NewStepRepo(env.DB),
+		persist.NewAttachmentRepo(env.DB),
+		persist.NewPipelineRepo(env.DB),
+		ingestTestClock{},
+		live,
+	)
+
+	if _, err := ingest.IngestItem(context.Background(), appautomation.IngestItemCommand{
+		BuildUID: buildUID,
+		CaseUID:  caseUID,
+		CaseKey:  "JIRA-ITEM-LIVE",
+		CaseName: "登录测试",
+		Status:   domainautomation.CaseStatusRunning,
+	}); err != nil {
+		t.Fatalf("ingest item: %v", err)
+	}
+
+	if len(live.events) != 1 {
+		t.Fatalf("live events = %d, want 1", len(live.events))
+	}
+	ev, ok := live.events[0].(domainautomation.ItemUpdated)
+	if !ok {
+		t.Fatalf("event type = %T, want ItemUpdated", live.events[0])
+	}
+	if ev.BuildUID != buildUID || ev.CaseUID != caseUID {
+		t.Errorf("uids = %s/%s, want %s/%s", ev.BuildUID, ev.CaseUID, buildUID, caseUID)
+	}
+	if ev.CaseName != "登录测试" || ev.CaseKey != "JIRA-ITEM-LIVE" || ev.Status != "running" {
+		t.Errorf("item event = %+v", ev)
+	}
 }
 
 func TestUpsertStepByCaseUID(t *testing.T) {
@@ -723,8 +768,85 @@ func TestStepUpsertReachesSSE(t *testing.T) {
 	if err != nil {
 		t.Fatalf("wait sse data: %v", err)
 	}
-	if !strings.Contains(dataLine, `"type":"step.upserted"`) || !strings.Contains(dataLine, "SSE步骤") {
-		t.Fatalf("sse data = %q, want step.upserted with step name", dataLine)
+	if !strings.Contains(dataLine, `"type":"step.upserted"`) ||
+		!strings.Contains(dataLine, "SSE步骤") ||
+		!strings.Contains(dataLine, "登录测试") {
+		t.Fatalf("sse data = %q, want step.upserted with case and step name", dataLine)
+	}
+}
+
+func TestItemAndExecutionUpdatesReachSSE(t *testing.T) {
+	env := harness.Setup(t)
+	buildUID := uuid.New().String()
+	createExecution(t, env, buildUID)
+	caseUID := uuid.New().String()
+
+	srv := httptest.NewServer(env.Router(t))
+	t.Cleanup(srv.Close)
+
+	admin := registerUser(t, env, "sse-item-admin", "AdminStrongPass123!", "sse-item-admin@example.com")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		srv.URL+api(env)+"/automation/executions/"+buildUID+"/events", nil)
+	if err != nil {
+		t.Fatalf("new sse request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+admin.AccessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("open sse: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("sse status=%d", resp.StatusCode)
+	}
+
+	reader := bufio.NewReader(resp.Body)
+	if _, err := waitSSELine(t, reader, 3*time.Second, func(line string) bool {
+		return strings.HasPrefix(line, ":")
+	}); err != nil {
+		t.Fatalf("wait connected: %v", err)
+	}
+
+	createItem(t, env, buildUID, "JIRA-SSE-ITEM", caseUID)
+	createdLine, err := waitSSELine(t, reader, 3*time.Second, func(line string) bool {
+		return strings.HasPrefix(line, "data:")
+	})
+	if err != nil {
+		t.Fatalf("wait item created sse: %v", err)
+	}
+	if !strings.Contains(createdLine, `"type":"item.updated"`) ||
+		!strings.Contains(createdLine, "登录测试") ||
+		!strings.Contains(createdLine, `"status":"running"`) {
+		t.Fatalf("sse create item = %q, want item.updated with case name", createdLine)
+	}
+
+	updateItem(t, env, buildUID, caseUID, "passed")
+	updatedLine, err := waitSSELine(t, reader, 3*time.Second, func(line string) bool {
+		return strings.HasPrefix(line, "data:")
+	})
+	if err != nil {
+		t.Fatalf("wait item passed sse: %v", err)
+	}
+	if !strings.Contains(updatedLine, `"type":"item.updated"`) ||
+		!strings.Contains(updatedLine, `"status":"passed"`) {
+		t.Fatalf("sse update item = %q, want passed item.updated", updatedLine)
+	}
+
+	finishExecution(t, env, buildUID, "completed")
+	finishedLine, err := waitSSELine(t, reader, 3*time.Second, func(line string) bool {
+		return strings.HasPrefix(line, "data:")
+	})
+	if err != nil {
+		t.Fatalf("wait execution sse: %v", err)
+	}
+	if !strings.Contains(finishedLine, `"type":"execution.updated"`) ||
+		!strings.Contains(finishedLine, `"status":"completed"`) {
+		t.Fatalf("sse finish execution = %q, want execution.updated completed", finishedLine)
 	}
 }
 

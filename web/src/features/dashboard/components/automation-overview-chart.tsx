@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { formatTrendDay } from '@/features/automation/data/utils'
 import type { DashboardTrend } from '../api/dashboard-api'
 
 export function AutomationOverviewChart({
@@ -16,12 +17,17 @@ export function AutomationOverviewChart({
 }: {
   trends: DashboardTrend[]
 }) {
+  const data = trends.map((trend) => ({
+    ...trend,
+    day: formatTrendDay(trend.stat_date),
+  }))
+
   return (
     <ResponsiveContainer width='100%' height={340}>
-      <ComposedChart data={trends}>
+      <ComposedChart data={data}>
         <CartesianGrid vertical={false} strokeDasharray='3 3' />
         <XAxis
-          dataKey='stat_date'
+          dataKey='day'
           stroke='currentColor'
           fontSize={12}
           tickLine={false}

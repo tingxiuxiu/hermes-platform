@@ -18,6 +18,8 @@ pytest --enable-hermes-plugin \
   --tap-token <X-Service-Token> \
   --build-uid <uuid> \
   tests/
+
+pytest --enable-hermes-plugin --tap-token local-dev-automation-service-token-3f6a1b9c --build-uid cfd58d9f-5251-4c7e-87c8-57318d3e4897 tests\test_mock_business.py
 ```
 
 `--tap-url` 填 API origin（不要带 `/tap/api/v1`），默认 `http://127.0.0.1:8080`。也可用环境变量：

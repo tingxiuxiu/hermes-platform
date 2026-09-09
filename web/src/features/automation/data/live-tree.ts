@@ -1,6 +1,7 @@
 import type {
   CaseItem,
   GoStepRow,
+  ItemUpdatedEvent,
   LiveEvent,
   LiveSnapshot,
   LiveStepNode,
@@ -131,6 +132,50 @@ export function treesFromSnapshot(snapshot: LiveSnapshot): SessionTrees {
   return trees
 }
 
+export function mergeSessionTrees(
+  live: SessionTrees,
+  snapshot: SessionTrees
+): SessionTrees {
+  return {
+    ...live,
+    ...snapshot,
+  }
+}
+
+export function mergeSessionItems(live: CaseItem[], snapshot: CaseItem[]): CaseItem[] {
+  const byUid = new Map(live.map((item) => [item.case_uid, item]))
+  for (const item of snapshot) {
+    const current = byUid.get(item.case_uid)
+    if (!current) {
+      byUid.set(item.case_uid, item)
+      continue
+    }
+    if (current.status !== 'running' && item.status === 'running') {
+      continue
+    }
+    byUid.set(item.case_uid, {
+      ...current,
+      ...item,
+      case_name: item.case_name || current.case_name,
+      case_key: item.case_key || current.case_key,
+    })
+  }
+  return [...byUid.values()]
+}
+
+export function isTerminalCase(status: string | null | undefined): boolean {
+  return Boolean(status) && status !== 'running'
+}
+
+export function shouldLoadPersistedTree(
+  status: string | null | undefined,
+  hasTree: boolean
+): boolean {
+  if (!status) return false
+  if (isTerminalCase(status)) return true
+  return !hasTree
+}
+
 export function applyLiveEvent(
   items: CaseItem[],
   trees: SessionTrees,
@@ -138,27 +183,25 @@ export function applyLiveEvent(
   event: LiveEvent
 ): { items: CaseItem[]; trees: SessionTrees; executionStatus: string } {
   if (event.type === 'step.upserted') {
+    const existing = items.find((item) => item.case_uid === event.case_uid)
+    if (existing && isTerminalCase(existing.status)) {
+      return { items, trees, executionStatus }
+    }
     const nextTrees = { ...trees }
     nextTrees[event.case_uid] = upsertStepTree(
       nextTrees[event.case_uid] ?? [],
       event
     )
-    const nextItems = upsertRunningItem(items, event.case_uid)
+    const nextItems = upsertRunningItem(items, event)
     return { items: nextItems, trees: nextTrees, executionStatus }
   }
 
   if (event.type === 'item.updated') {
-    const nextItems = items.map((item) =>
-      item.case_uid === event.case_uid
-        ? {
-            ...item,
-            status: event.status,
-            end_time: event.end_time ?? item.end_time,
-            duration: event.duration ?? item.duration,
-          }
-        : item
-    )
-    return { items: nextItems, trees, executionStatus }
+    return {
+      items: upsertItemFromEvent(items, event),
+      trees,
+      executionStatus,
+    }
   }
 
   if (event.type === 'execution.updated') {
@@ -168,22 +211,92 @@ export function applyLiveEvent(
   return { items, trees, executionStatus }
 }
 
-function upsertRunningItem(items: CaseItem[], caseUid: string): CaseItem[] {
-  if (items.some((item) => item.case_uid === caseUid)) return items
-  return [
-    ...items,
-    {
-      id: 0,
-      case_uid: caseUid,
-      case_key: '',
-      case_name: 'Running case',
-      attempt_number: 1,
-      status: 'running',
-      start_time: null,
-      end_time: null,
-      duration: null,
-    },
-  ]
+function upsertItemFromEvent(items: CaseItem[], event: ItemUpdatedEvent): CaseItem[] {
+  const index = items.findIndex((item) => item.case_uid === event.case_uid)
+  const current = index >= 0 ? items[index] : null
+  const nextItem: CaseItem = {
+    id: current?.id ?? 0,
+    case_uid: event.case_uid,
+    case_key: event.case_key || current?.case_key || '',
+    case_name: event.case_name || current?.case_name || 'Running case',
+    attempt_number: event.attempt_number ?? current?.attempt_number ?? 1,
+    status: event.status,
+    start_time: event.start_time ?? current?.start_time ?? null,
+    end_time: event.end_time ?? current?.end_time ?? null,
+    duration: event.duration ?? current?.duration ?? null,
+  }
+  if (index < 0) return [...items, nextItem]
+  const next = [...items]
+  next[index] = { ...current!, ...nextItem }
+  return next
+}
+
+export function followLiveCaseUid(
+  items: CaseItem[],
+  current: string | null,
+  followLive: boolean,
+  urlCase?: string | null
+): string | null {
+  if (urlCase && !followLive && items.some((item) => item.case_uid === urlCase)) {
+    return urlCase
+  }
+  const running = sortCasesForSession(items).find((item) => item.status === 'running')
+  if (followLive) {
+    return running?.case_uid ?? current ?? items[0]?.case_uid ?? null
+  }
+  if (current && items.some((item) => item.case_uid === current)) {
+    return current
+  }
+  return running?.case_uid ?? items[0]?.case_uid ?? null
+}
+
+export function activeStepPath(nodes: LiveStepNode[]): string | null {
+  let last: string | null = null
+  let running: string | null = null
+  const walk = (list: LiveStepNode[]) => {
+    for (const node of list) {
+      last = node.step_path
+      if (node.status === 'running') running = node.step_path
+      walk(node.children)
+    }
+  }
+  walk(nodes)
+  return running ?? last
+}
+
+function upsertRunningItem(items: CaseItem[], event: StepDelta): CaseItem[] {
+  const caseName = event.case_name?.trim()
+  const caseKey = event.case_key?.trim()
+  const index = items.findIndex((item) => item.case_uid === event.case_uid)
+  if (index < 0) {
+    return [
+      ...items,
+      {
+        id: 0,
+        case_uid: event.case_uid,
+        case_key: caseKey || '',
+        case_name: caseName || 'Running case',
+        attempt_number: 1,
+        status: 'running',
+        start_time: null,
+        end_time: null,
+        duration: null,
+      },
+    ]
+  }
+
+  const current = items[index]
+  const nextName =
+    caseName && (!current.case_name || current.case_name === 'Running case')
+      ? caseName
+      : current.case_name
+  const nextKey = caseKey && !current.case_key ? caseKey : current.case_key
+  if (nextName === current.case_name && nextKey === current.case_key) {
+    return items
+  }
+  const next = [...items]
+  next[index] = { ...current, case_name: nextName, case_key: nextKey }
+  return next
 }
 
 export function isTerminalExecution(status: string): boolean {

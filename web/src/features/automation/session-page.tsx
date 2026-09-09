@@ -22,14 +22,15 @@ export function ExecutionSessionPage({
 
   return (
     <AutomationPageShell
+      fixed
       title={execution?.job_name ?? 'Execution session'}
       description={
         execution
-          ? `${shortUid(execution.build_uid)} · ${execution.status}`
+          ? `${shortUid(execution.build_uid)} · ${session.executionStatus}`
           : 'Loading live session…'
       }
     >
-      {execution?.status === 'running' && (
+      {session.executionStatus === 'running' && (
         <p className='-mt-2 text-sm text-muted-foreground'>
           以插件心跳为准；进程被杀约 60 秒后标记中止。
         </p>
@@ -41,15 +42,15 @@ export function ExecutionSessionPage({
           Loading session…
         </div>
       ) : execution ? (
-        <div className='grid min-h-[32rem] gap-4 lg:grid-cols-[minmax(18rem,24rem)_1fr]'>
-          <section className='rounded-[18px] border border-[#e0e0e0] bg-white dark:bg-background'>
-            <header className='border-b border-[#e0e0e0] px-4 py-3'>
+        <div className='grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)]'>
+          <section className='flex min-h-0 flex-col overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white dark:bg-background'>
+            <header className='shrink-0 border-b border-[#e0e0e0] px-4 py-3'>
               <div className='text-[17px] font-medium tracking-tight'>Cases</div>
               <div className='text-sm text-muted-foreground'>
                 {session.items.length} in this run
               </div>
             </header>
-            <div className='space-y-2 p-3'>
+            <div className='flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3'>
               {session.items.length ? (
                 session.items.map((item) => {
                   const selected = item.case_uid === session.selectedCaseUid
@@ -93,8 +94,8 @@ export function ExecutionSessionPage({
             </div>
           </section>
 
-          <section className='rounded-[18px] border border-[#e0e0e0] bg-white dark:bg-background'>
-            <header className='border-b border-[#e0e0e0] px-4 py-3'>
+          <section className='flex min-h-0 flex-col overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white dark:bg-background'>
+            <header className='shrink-0 border-b border-[#e0e0e0] px-4 py-3'>
               <div className='text-[17px] font-medium tracking-tight'>
                 {session.selected?.case_name ?? 'Step tree'}
               </div>
@@ -104,22 +105,22 @@ export function ExecutionSessionPage({
                   : 'Select a case to inspect steps.'}
               </div>
             </header>
-            <div className='space-y-4 p-4'>
-              {session.selected ? (
-                <>
-                  <div className='grid gap-3 sm:grid-cols-3'>
-                    <Info label='Started' value={formatDateTime(session.selected.start_time)} />
-                    <Info label='Duration' value={formatDuration(session.selected.duration)} />
-                    <Info label='Case UID' value={shortUid(session.selected.case_uid)} />
-                  </div>
-                  <StepTree nodes={tree} />
-                </>
-              ) : (
-                <div className='py-16 text-center text-sm text-muted-foreground'>
-                  Waiting for the first case.
+            {session.selected ? (
+              <div className='flex min-h-0 flex-1 flex-col'>
+                <div className='shrink-0 grid gap-3 p-4 pb-0 sm:grid-cols-3'>
+                  <Info label='Started' value={formatDateTime(session.selected.start_time)} />
+                  <Info label='Duration' value={formatDuration(session.selected.duration)} />
+                  <Info label='Case UID' value={shortUid(session.selected.case_uid)} />
                 </div>
-              )}
-            </div>
+                <div className='flex min-h-0 flex-1 flex-col pt-4'>
+                  <StepTree nodes={tree} />
+                </div>
+              </div>
+            ) : (
+              <div className='py-16 text-center text-sm text-muted-foreground'>
+                Waiting for the first case.
+              </div>
+            )}
           </section>
         </div>
       ) : (

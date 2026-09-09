@@ -43,7 +43,7 @@ func (uc *ProjectorUseCase) RebuildGlobal(ctx context.Context, days int) error {
 		days = 7
 	}
 	now := uc.clock.Now()
-	since := now.AddDate(0, 0, -(days - 1))
+	since := dashboard.DayKey(now).AddDate(0, 0, -(days - 1))
 
 	terminalExecs, err := uc.source.ListExecutionsInRange(ctx, since)
 	if err != nil {

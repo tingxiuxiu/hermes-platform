@@ -2,8 +2,8 @@
 
 # 🔱 Hermes Platform
 
-[![Python Version](https://img.shields.io/badge/Python-3.14+-3776AB?style=flat-square&logo=python)](https://www.python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.139-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go)](https://go.dev)
+[![Gin](https://img.shields.io/badge/Gin-1.12-00ADD8?style=flat-square&logo=go)](https://gin-gonic.com)
 [![React Version](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)](https://reactjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
@@ -39,7 +39,7 @@
 - 用户 JWT 无状态登录鉴权
 - 自动化上报接口使用独立 `X-Service-Token` 服务令牌，与用户登录态完全区分
 - 基于角色的权限控制 (RBAC)，权限树管理
-- 密码使用 Argon2 / Bcrypt 哈希存储 (pwdlib)
+- 密码使用 Argon2id 哈希存储
 
 ### 🧪 自动化测试执行追踪
 
@@ -53,16 +53,16 @@
 
 ### 🛠️ 开发者友好
 
-- FastAPI + Pydantic v2，自动生成 Swagger / ReDoc
-- 领域驱动分层架构 (`domains/{user,permission,automation}`)
-- SQLAlchemy 2.x + Alembic 数据库迁移
+- Go + Gin，六边形分层（`domain` / `application` / `adapter` / `bootstrap`）
+- 模块化单体 + 多二进制（`api` / `worker` / `scheduler` / `migrate`）
+- pgx + golang-migrate 数据库迁移
 - 完整的 TypeScript 类型支持，前后端契约文档齐全
 
 ### 📈 可观测性
 
-- OpenTelemetry 全链路追踪 (FastAPI / SQLAlchemy / Redis / httpx)
-- structlog 结构化日志
-- Sentry 错误监控集成
+- OpenTelemetry 全链路追踪 (Gin / pgx / Redis)
+- slog 结构化日志
+- `/healthz` 存活探针与 `/readyz` 就绪探针
 
 </td>
 </tr>
@@ -74,18 +74,17 @@
 
 | 技术                                        | 用途           | 版本    |
 | ------------------------------------------- | -------------- | ------- |
-| [Python](https://python.org)                | 主要语言       | 3.14+   |
-| [FastAPI](https://fastapi.tiangolo.com)     | Web 框架       | 0.139+  |
-| [SQLAlchemy](https://sqlalchemy.org)         | ORM 框架       | 2.0+    |
-| [Alembic](https://alembic.sqlalchemy.org)    | 数据库迁移     | 1.18+   |
+| [Go](https://go.dev)                        | 主要语言       | 1.26+   |
+| [Gin](https://gin-gonic.com)                | Web 框架       | 1.12    |
+| [pgx](https://github.com/jackc/pgx)         | PostgreSQL 驱动 | v5     |
+| [golang-migrate](https://github.com/golang-migrate/migrate) | 数据库迁移 | v4 |
 | [PostgreSQL](https://postgresql.org)         | 主数据库       | 14+     |
-| [Redis](https://redis.io)                    | 缓存           | 6+      |
-| [PyJWT](https://pyjwt.readthedocs.io)        | 用户身份认证   | v2      |
-| [pwdlib](https://frankie567.github.io/pwdlib/) | 密码哈希 (Argon2/Bcrypt) | v0.3+ |
-| [PDM](https://pdm-project.org)               | 包管理 / 任务运行 | latest |
-| [OpenTelemetry](https://opentelemetry.io)    | 可观测性/链路追踪 | 1.44+ |
-| [structlog](https://www.structlog.org)       | 结构化日志     | 26+     |
-| [Sentry](https://sentry.io)                  | 错误监控       | latest  |
+| [Redis](https://redis.io)                    | 缓存 / 任务队列 | 6+      |
+| [golang-jwt](https://github.com/golang-jwt/jwt) | 用户身份认证 | v5 |
+| [Argon2id](https://pkg.go.dev/golang.org/x/crypto/argon2) | 密码哈希 | latest |
+| [asynq](https://github.com/hibiken/asynq)    | 异步任务 / 定时调度 | 0.25+ |
+| [OpenTelemetry](https://opentelemetry.io)    | 可观测性/链路追踪 | 1.46+ |
+| [slog](https://pkg.go.dev/log/slog)          | 结构化日志     | 标准库  |
 
 ### 前端 (`web/`)
 
@@ -110,7 +109,7 @@
 
 ### 前置要求
 
-- ✅ Python 3.14+ 与 [PDM](https://pdm-project.org)
+- ✅ Go 1.26+
 - ✅ Node.js 20+ 与 [pnpm](https://pnpm.io)
 - ✅ PostgreSQL 14+
 - ✅ Redis 6+
@@ -124,11 +123,14 @@ cd hermes-platform
 
 ### 2️⃣ 配置环境变量
 
-在仓库根目录创建 `.env`（后端 `service/` 通过相对路径 `../.env` 读取），至少需要包含：
+在仓库根目录创建 `.env`（`service/` 会向上查找并读取），至少需要包含：
 
 ```bash
 PROJECT_NAME=Hermes Platform
 ENVIRONMENT=local
+
+# HTTP（本地开发建议 8080，与前端 Vite 代理一致；默认 80）
+SERVICE_PORT=8080
 
 # PostgreSQL
 POSTGRES_SERVER=localhost
@@ -157,26 +159,25 @@ AUTOMATION_SERVICE_TOKEN=change-this-service-token
 ```bash
 cd service
 
-# 安装依赖
-pdm install
-
 # 执行数据库迁移
-pdm run alembic upgrade head
+make migrate-up
 
-# 启动开发服务器 (默认端口 8080)
-pdm run dev
+# 启动 HTTP API
+make run-api
 ```
 
 服务将在 `http://localhost:8080` 启动 🎉
-Swagger UI（Python）：`http://localhost:8080/tap/api/v1/docs`
-Go 存活探针：`http://localhost:8080/healthz`
+存活探针：`http://localhost:8080/healthz`
+就绪探针：`http://localhost:8080/readyz`
 
-可选：启动 Celery worker / beat（用于异步刷新 dashboard 快照）：
+可选：启动 asynq worker / scheduler（用于异步刷新 dashboard 快照）：
 
 ```bash
-pdm run celery-worker
-pdm run celery-beat
+make run-worker
+make run-scheduler   # 务必单实例
 ```
+
+Windows 无 make 时可用 `./scripts/tasks.sh`（见 [`service/README.md`](service/README.md)）。
 
 ### 4️⃣ 启动前端 (`web/`)
 
@@ -197,10 +198,11 @@ pnpm dev
 
 ## 📚 API 文档
 
-- **当前后端**：[`go-service/`](go-service/README.md)（Gin，前缀 `/tap/api/v1`）。Python `service/` 已弃用。
+- **后端实现**：[`service/`](service/README.md)（Gin，前缀 `/tap/api/v1`）
+- **设计文档**：[docs/service/](docs/service/README.md)
 - **实时会话设计**：[docs/live-execution/](docs/live-execution/README.md)
-- **交互式文档**：Python 后端启动后访问 Swagger UI (`/tap/api/v1/docs`) 或 ReDoc (`/tap/api/v1/redoc`)；Go 无 Swagger，探针为 `/healthz`、`/readyz`
-- **契约说明**：[docs/go-service/03-api-contract.md](docs/go-service/03-api-contract.md)
+- **探针**：`/healthz`（存活）、`/readyz`（就绪，检查 PostgreSQL + Redis）
+- **契约说明**：[docs/live-execution/04-api.md](docs/live-execution/04-api.md)
 
 ### 认证接口
 
@@ -235,17 +237,16 @@ PATCH  /tap/api/v1/automation/executions/{build_uid}/items/{case_uid}
 POST   /tap/api/v1/automation/items/{case_uid}/steps
 ```
 
-v1 附件只写 Allure，不上报 Hermes。完整契约见 [docs/go-service/03-api-contract.md](docs/go-service/03-api-contract.md)。
+v1 附件只写 Allure，不上报 Hermes。完整契约见 [docs/live-execution/04-api.md](docs/live-execution/04-api.md)。
 
 ## 🏛️ 项目架构
 
 ```
 hermes-platform/
-├── ⚙️ go-service/              # 当前后端 (Go + Gin + asynq)
-├── ⚙️ service/                 # 已弃用的 FastAPI 后端 (Python)
+├── ⚙️ service/                 # Go 后端 (Gin + asynq)
 ├── 🎨 web/                     # React 前端 (TanStack Router + shadcn/ui)
 ├── 🔌 hermes_plugin/           # pytest 实时上报插件
-├── 📖 docs/go-service/         # Go 服务设计 / ADR
+├── 📖 docs/service/            # Go 服务设计 / ADR
 ├── 📖 docs/live-execution/     # 实时会话设计
 ├── 🐳 docker/                  # Dockerfile
 ├── 📡 etc/otel/                # OpenTelemetry Collector 配置
@@ -259,7 +260,7 @@ hermes-platform/
 | --------------------- | ------------------------------------------------------------ |
 | 🎫 **JWT 用户认证**   | 无状态身份验证，供前端登录态使用                              |
 | 🔑 **服务令牌鉴权**   | 自动化上报接口使用独立的 `X-Service-Token`，与用户登录态区分  |
-| 🛡️ **密码哈希**       | Argon2 / Bcrypt 加密存储 (pwdlib)                             |
+| 🛡️ **密码哈希**       | Argon2id 加密存储                                             |
 | 👥 **RBAC**           | 基于角色的访问控制，支持权限树管理                            |
 | ⚠️ **默认密钥保护**   | `SECRET_KEY` / `AUTOMATION_SERVICE_TOKEN` 等若在非 local 环境仍为默认值，启动时直接报错拒绝运行 |
 
@@ -268,9 +269,8 @@ hermes-platform/
 ```bash
 # 后端测试 (service/)
 cd service
-pdm run pytest -v
-pdm run ruff check .
-pdm run mypy .
+make test          # 全量测试（真实 PostgreSQL + Redis）
+make lint          # golangci-lint
 
 # 前端测试 (web/)
 cd web
@@ -305,7 +305,7 @@ pnpm build
 - Stateless JWT authentication for user login
 - Automation reporting endpoints use an independent `X-Service-Token`, fully decoupled from user login state
 - Role-based access control (RBAC) with permission tree management
-- Passwords hashed with Argon2 / Bcrypt (pwdlib)
+- Passwords hashed with Argon2id
 
 ### 🧪 Automation Test Execution Tracking
 
@@ -319,16 +319,16 @@ pnpm build
 
 ### 🛠️ Developer Friendly
 
-- FastAPI + Pydantic v2 with auto-generated Swagger / ReDoc
-- Domain-driven architecture (`domains/{user,permission,automation}`)
-- SQLAlchemy 2.x + Alembic migrations
+- Go + Gin with hexagonal layering (`domain` / `application` / `adapter` / `bootstrap`)
+- Modular monolith with multiple binaries (`api` / `worker` / `scheduler` / `migrate`)
+- pgx + golang-migrate for schema migrations
 - Full TypeScript typing with a dedicated frontend integration doc
 
 ### 📈 Observability
 
-- OpenTelemetry tracing across FastAPI / SQLAlchemy / Redis / httpx
-- Structured logging via structlog
-- Sentry error monitoring integration
+- OpenTelemetry tracing across Gin / pgx / Redis
+- Structured logging via slog
+- `/healthz` liveness and `/readyz` readiness probes
 
 </td>
 </tr>
@@ -340,18 +340,17 @@ pnpm build
 
 | Technology                                   | Purpose                        | Version |
 | --------------------------------------------- | ------------------------------- | ------- |
-| [Python](https://python.org)                  | Main Language                  | 3.14+   |
-| [FastAPI](https://fastapi.tiangolo.com)       | Web Framework                  | 0.139+  |
-| [SQLAlchemy](https://sqlalchemy.org)           | ORM Framework                  | 2.0+    |
-| [Alembic](https://alembic.sqlalchemy.org)      | Database Migrations            | 1.18+   |
+| [Go](https://go.dev)                          | Main Language                  | 1.26+   |
+| [Gin](https://gin-gonic.com)                  | Web Framework                  | 1.12    |
+| [pgx](https://github.com/jackc/pgx)           | PostgreSQL Driver              | v5      |
+| [golang-migrate](https://github.com/golang-migrate/migrate) | Database Migrations | v4 |
 | [PostgreSQL](https://postgresql.org)           | Database                       | 14+     |
-| [Redis](https://redis.io)                      | Cache                           | 6+      |
-| [PyJWT](https://pyjwt.readthedocs.io)          | User Authentication            | v2      |
-| [pwdlib](https://frankie567.github.io/pwdlib/) | Password Hashing (Argon2/Bcrypt)| v0.3+  |
-| [PDM](https://pdm-project.org)                 | Package/Task Management         | latest  |
-| [OpenTelemetry](https://opentelemetry.io)      | Observability / Tracing         | 1.44+   |
-| [structlog](https://www.structlog.org)         | Structured Logging              | 26+     |
-| [Sentry](https://sentry.io)                    | Error Monitoring                | latest  |
+| [Redis](https://redis.io)                      | Cache / Task Broker            | 6+      |
+| [golang-jwt](https://github.com/golang-jwt/jwt) | User Authentication          | v5      |
+| [Argon2id](https://pkg.go.dev/golang.org/x/crypto/argon2) | Password Hashing    | latest  |
+| [asynq](https://github.com/hibiken/asynq)      | Async Jobs / Scheduling        | 0.25+   |
+| [OpenTelemetry](https://opentelemetry.io)      | Observability / Tracing        | 1.46+   |
+| [slog](https://pkg.go.dev/log/slog)            | Structured Logging             | stdlib  |
 
 ### Frontend (`web/`)
 
@@ -376,7 +375,7 @@ pnpm build
 
 ### Prerequisites
 
-- ✅ Python 3.14+ with [PDM](https://pdm-project.org)
+- ✅ Go 1.26+
 - ✅ Node.js 20+ with [pnpm](https://pnpm.io)
 - ✅ PostgreSQL 14+
 - ✅ Redis 6+
@@ -390,11 +389,14 @@ cd hermes-platform
 
 ### 2️⃣ Configure Environment Variables
 
-Create a `.env` file at the repository root (the backend in `service/` reads it via `../.env`), with at least:
+Create a `.env` file at the repository root (`service/` walks upward to load it), with at least:
 
 ```bash
 PROJECT_NAME=Hermes Platform
 ENVIRONMENT=local
+
+# HTTP (use 8080 locally to match the Vite proxy; default is 80)
+SERVICE_PORT=8080
 
 # PostgreSQL
 POSTGRES_SERVER=localhost
@@ -423,26 +425,25 @@ AUTOMATION_SERVICE_TOKEN=change-this-service-token
 ```bash
 cd service
 
-# Install dependencies
-pdm install
-
 # Run database migrations
-pdm run alembic upgrade head
+make migrate-up
 
-# Start the dev server (default port 8080)
-pdm run dev
+# Start the HTTP API
+make run-api
 ```
 
 Server will start at `http://localhost:8080` 🎉
-Swagger UI (Python): `http://localhost:8080/tap/api/v1/docs`
-Go liveness: `http://localhost:8080/healthz`
+Liveness: `http://localhost:8080/healthz`
+Readiness: `http://localhost:8080/readyz`
 
-Optional: start Celery worker / beat (for async dashboard snapshot refresh):
+Optional: start the asynq worker / scheduler (for async dashboard snapshot refresh):
 
 ```bash
-pdm run celery-worker
-pdm run celery-beat
+make run-worker
+make run-scheduler   # single instance only
 ```
+
+On Windows without make, use `./scripts/tasks.sh` (see [`service/README.md`](service/README.md)).
 
 ### 4️⃣ Start the Frontend (`web/`)
 
@@ -463,10 +464,11 @@ App will start at `http://localhost:5173` 🚀 (already proxies `/tap/api` to th
 
 ## 📚 API Documentation
 
-- **Current backend**: [`go-service/`](go-service/README.md) (Gin, prefix `/tap/api/v1`). Python `service/` is abandoned.
+- **Backend**: [`service/`](service/README.md) (Gin, prefix `/tap/api/v1`)
+- **Design docs**: [docs/service/](docs/service/README.md)
 - **Live session design**: [docs/live-execution/](docs/live-execution/README.md)
-- **Interactive docs**: Python Swagger UI (`/tap/api/v1/docs`) / ReDoc (`/tap/api/v1/redoc`); Go has no Swagger — probes are `/healthz` and `/readyz`
-- **Contract**: [docs/go-service/03-api-contract.md](docs/go-service/03-api-contract.md)
+- **Probes**: `/healthz` (liveness), `/readyz` (readiness, checks PostgreSQL + Redis)
+- **Contract**: [docs/live-execution/04-api.md](docs/live-execution/04-api.md)
 
 ### Authentication
 
@@ -501,17 +503,16 @@ PATCH  /tap/api/v1/automation/executions/{build_uid}/items/{case_uid}
 POST   /tap/api/v1/automation/items/{case_uid}/steps
 ```
 
-v1 attachments go to Allure only, not Hermes. Full contract: [docs/go-service/03-api-contract.md](docs/go-service/03-api-contract.md).
+v1 attachments go to Allure only, not Hermes. Full contract: [docs/live-execution/04-api.md](docs/live-execution/04-api.md).
 
 ## 🏛️ Project Structure
 
 ```
 hermes-platform/
-├── ⚙️ go-service/              # Current backend (Go + Gin + asynq)
-├── ⚙️ service/                 # Abandoned FastAPI backend (Python)
+├── ⚙️ service/                 # Go backend (Gin + asynq)
 ├── 🎨 web/                     # React frontend (TanStack Router + shadcn/ui)
 ├── 🔌 hermes_plugin/           # pytest live-reporting plugin
-├── 📖 docs/go-service/         # Go service design / ADRs
+├── 📖 docs/service/            # Go service design / ADRs
 ├── 📖 docs/live-execution/     # Live session design
 ├── 🐳 docker/                  # Dockerfile
 ├── 📡 etc/otel/                # OpenTelemetry Collector config
@@ -525,7 +526,7 @@ hermes-platform/
 | ---------------------------- | -------------------------------------------------------------------------- |
 | 🎫 **JWT User Auth**         | Stateless authentication for the frontend login session                  |
 | 🔑 **Service Token Auth**    | Automation reporting endpoints use an independent `X-Service-Token`, decoupled from user login |
-| 🛡️ **Password Hashing**      | Argon2 / Bcrypt encrypted storage (pwdlib)                                |
+| 🛡️ **Password Hashing**      | Argon2id encrypted storage                                                |
 | 👥 **RBAC**                  | Role-based access control with permission tree management                |
 | ⚠️ **Default Secret Guard**  | Startup fails if `SECRET_KEY` / `AUTOMATION_SERVICE_TOKEN`, etc. are left at defaults in non-local environments |
 
@@ -534,9 +535,8 @@ hermes-platform/
 ```bash
 # Backend tests (service/)
 cd service
-pdm run pytest -v
-pdm run ruff check .
-pdm run mypy .
+make test          # full suite (real PostgreSQL + Redis)
+make lint          # golangci-lint
 
 # Frontend tests (web/)
 cd web

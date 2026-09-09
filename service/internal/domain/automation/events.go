@@ -1,6 +1,8 @@
 package automation
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -30,16 +32,25 @@ func (ExecutionCreated) eventKind() string { return "execution.created" }
 type ExecutionUpdated struct {
 	ExecutionID int64
 	BuildUID    uuid.UUID
+	Status      string
 }
 
 func (ExecutionUpdated) eventKind() string { return "execution.updated" }
 
 // ItemUpdated 在一次用例创建或更新后发布。
 type ItemUpdated struct {
-	ExecutionID int64
-	BuildUID    uuid.UUID
-	ItemID      int64
-	CaseUID     uuid.UUID
+	ExecutionID   int64
+	BuildUID      uuid.UUID
+	ItemID        int64
+	CaseUID       uuid.UUID
+	CaseKey       string
+	CaseName      string
+	AttemptNumber int
+	Status        string
+	StartTime     *time.Time
+	EndTime       *time.Time
+	Duration      *float64
+	ErrorMessage  string
 }
 
 func (ItemUpdated) eventKind() string { return "item.updated" }
@@ -48,6 +59,8 @@ func (ItemUpdated) eventKind() string { return "item.updated" }
 type StepUpserted struct {
 	BuildUID uuid.UUID
 	CaseUID  uuid.UUID
+	CaseKey  string
+	CaseName string
 	StepPath string
 	StepName string
 	Status   string

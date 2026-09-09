@@ -180,10 +180,14 @@ func BuildSummarySnapshot(in SummaryInput) SummarySnapshot {
 	}
 }
 
-// DayKey 返回时间戳的日期键（用于趋势分组与空日期补齐）。
+// DayKey 返回 UTC 日历日（00:00:00Z），作为趋势分组与空日期补齐的稳定键。
+//
+// 必须忽略入参 Location：pgx 扫出的 timestamptz 可能是 Local，而 clock.Now() 是 UTC，
+// 用带 Location 的 time.Time 做 map key 会导致当天数据无法落入补齐窗口，趋势全为 0。
 func DayKey(t time.Time) time.Time {
-	y, m, d := t.Date()
-	return time.Date(y, m, d, 0, 0, 0, 0, t.Location())
+	u := t.UTC()
+	y, m, d := u.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
 // BuildTrendSnapshots 由近 N 天的终止态用例聚合出每日趋势，并补齐缺失日期。

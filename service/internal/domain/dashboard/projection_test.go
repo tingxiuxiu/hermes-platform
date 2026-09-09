@@ -230,4 +230,35 @@ func TestBuildTrendSnapshotsFillsGaps(t *testing.T) {
 	}
 }
 
+func TestBuildTrendSnapshotsGroupsMixedLocationsOntoUTCDay(t *testing.T) {
+	cst := time.FixedZone("CST", 8*3600)
+	end := time.Date(2026, 9, 8, 15, 22, 7, 0, time.UTC)
+	started := time.Date(2026, 9, 8, 23, 13, 0, 0, cst) // 同一瞬间：2026-09-08 15:13 UTC
+
+	cases := []dashboard.TerminalCase{
+		{ExecutionID: 1, CaseKey: "a", Status: "passed", StartedAt: &started},
+		{ExecutionID: 1, CaseKey: "b", Status: "skipped", StartedAt: &started},
+	}
+	execs := []dashboard.TerminalExecution{
+		{ExecutionID: 1, Status: "completed", StartedAt: started},
+		{ExecutionID: 2, Status: "completed", StartedAt: time.Date(2026, 9, 8, 15, 20, 0, 0, time.UTC)},
+	}
+
+	trends := dashboard.BuildTrendSnapshots(cases, execs, end, 7)
+	if len(trends) != 7 {
+		t.Fatalf("trends = %d, want 7", len(trends))
+	}
+
+	last := trends[6]
+	if last.StatDate.Location() != time.UTC {
+		t.Errorf("stat_date location = %s, want UTC", last.StatDate.Location())
+	}
+	if y, m, d := last.StatDate.Date(); y != 2026 || m != time.September || d != 8 {
+		t.Errorf("last day = %s, want 2026-09-08 UTC", last.StatDate.Format("2006-01-02 MST"))
+	}
+	if last.ExecutionTotal != 2 || last.SuccessCases != 1 || last.SkippedCases != 1 {
+		t.Errorf("last day = %+v, want exec=2 success=1 skipped=1", last)
+	}
+}
+
 func ptr(v float64) *float64 { return &v }

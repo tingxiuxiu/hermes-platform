@@ -250,6 +250,12 @@ func (r *SnapshotRepo) ListCasesByExecution(ctx context.Context, executionID int
 // ---------------------------------------------------------------------------
 
 func dateOnly(t time.Time) time.Time {
+	return dashboard.DayKey(t)
+}
+
+// calendarDate 保留 DATE 列的年月日，写成 UTC 午夜。
+// 不能走 DayKey：pgx 可能把 DATE 扫成「本地午夜」，UTC 转换会错一天。
+func calendarDate(t time.Time) time.Time {
 	y, m, d := t.Date()
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
@@ -305,7 +311,7 @@ func scanTrend(row pgx.Row) (*dashboard.TrendSnapshot, error) {
 		return nil, fmt.Errorf("dashboard: scan trend: %w", err)
 	}
 	return &dashboard.TrendSnapshot{
-		StatDate:       statDate,
+		StatDate:       calendarDate(statDate),
 		ExecutionTotal: execTotal,
 		SuccessCases:   success,
 		FailureCases:   failure,
